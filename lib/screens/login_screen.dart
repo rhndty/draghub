@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import 'home_screen.dart'; // <-- Tanda // sudah dihapus agar halaman Home dikenali
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -129,19 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 40),
 
-              Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.toggleBackground,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(child: _buildRoleToggle(title: 'Pembalap', icon: Icons.sports_motorsports_outlined, isSelected: isRacerTab, onTap: () => setState(() => isRacerTab = true))),
-                    Expanded(child: _buildRoleToggle(title: 'Panitia', icon: Icons.flag_outlined, isSelected: !isRacerTab, onTap: () => setState(() => isRacerTab = false))),
-                  ],
-                ),
-              ),
+
               const SizedBox(height: 32),
 
               _buildInputLabel('IDENTITAS AKSES'),
@@ -235,14 +224,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildSocialButton(Icons.face, onTap: () {}),
-                  const SizedBox(width: 16),
-                  _buildSocialButton(Icons.g_mobiledata, iconSize: 32, onTap: () {}),
-                ],
-              ),
               const SizedBox(height: 48),
 
               Container(
@@ -274,7 +255,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const Text('Belum punya akun? ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                   GestureDetector(
-                    onTap: () {}, 
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RegisterScreen(),
+                        ),
+                      );
+                    },
                     child: const Text('Daftar Paddock', style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.bold)),
                   ),
                 ],
