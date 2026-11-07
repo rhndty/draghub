@@ -137,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               _buildTextField(
                 controller: _emailController,
-                hintText: 'driver@draghub.com',
+                hintText: 'driver@gmail.com',
                 prefixIcon: Icons.email_outlined,
               ),
               const SizedBox(height: 20),

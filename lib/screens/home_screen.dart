@@ -1168,7 +1168,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildBottomNavItem(0, Icons.home_outlined),
           _buildBottomNavItem(1, Icons.leaderboard_outlined),
-          _buildBottomNavItem(2, Icons.sports_motorsports_outlined),
+          _buildBottomNavItem(2, Icons.admin_panel_settings),
           _buildBottomNavItem(3, Icons.person_outline),
         ],
       ),
