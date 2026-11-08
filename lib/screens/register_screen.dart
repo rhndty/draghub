@@ -122,7 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _buildInputLabel('NAMA LENGKAP'),
               _buildTextField(
                 controller: _nameController,
-                hintText: 'cth. Bayu Pratama',
+                hintText: 'cth. Jhon Theo',
                 icon: Icons.badge_outlined,
                 keyboardType: TextInputType.name,
               ),
@@ -132,7 +132,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _buildInputLabel('IDENTITAS AKSES (EMAIL)'),
               _buildTextField(
                 controller: _emailController,
-                hintText: 'rider@apexdrag.com',
+                hintText: 'xxxxxxxx@gmail.com',
                 icon: Icons.mail_outline,
                 keyboardType: TextInputType.emailAddress,
               ),
