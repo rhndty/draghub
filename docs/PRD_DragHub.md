@@ -32,7 +32,7 @@ Sistem membagi pengguna ke dalam 5 entitas peran resmi:
 
 | Peran (Role) | Representasi Tim | Tanggung Jawab Utama dalam Aplikasi |
 | :--- | :--- | :--- |
-| **Ketua (President)** | **Rafli** *(Project Lead)* | • Pengawasan menyeluruh aktivitas komunitas<br>• Menyetujui (*Approve*) atau Menolak (*Reject*) draft event resmi<br>• Memantau laporan audit mutasi kas dari Bendahara |
+| **Ketua (President)** | **Rafli** | • Pengawasan menyeluruh aktivitas komunitas<br>• Menyetujui (*Approve*) atau Menolak (*Reject*) draft event resmi<br>• Memantau laporan audit mutasi kas dari Bendahara |
 | **Wakil Ketua** | **Raihan** | • Membantu tugas eksekutif Ketua<br>• Otorisasi event cadangan jika Ketua berhalangan<br>• Pengawasan teknis telemetri balap |
 | **Sekretaris** | **Alfa** | • Menyusun agenda event balap resmi & latber (*Drafting Event*)<br>• Mengelola pengumuman dan regulasi teknis balap<br>• Merekap kuota dan verifikasi administrasi pembalap |
 | **Bendahara** | **Dika** | • Mencatat mutasi kas masuk dan keluar (uang sirkuit, iuran, pendaftaran)<br>• Memeriksa & memvalidasi bukti transfer pendaftaran event<br>• Menerbitkan transparansi saldo kas komunitas |

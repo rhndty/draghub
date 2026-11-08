@@ -1,6 +1,6 @@
 # Panduan Pembagian Kerja & Standar Git Pull Request
 ## DragHub Mobile Team (Kolaborasi 5 Developer)
-**Anggota Tim:** Rafli (Lead), Dika, Alfa, Raihan, Ferdi  
+**Anggota Tim:** Rafli, Dika, Alfa, Raihan, Ferdi  
 **Dokumen Terkait:** [PRD_DragHub.md](PRD_DragHub.md) | [ERD_DragHub.md](ERD_DragHub.md)
 
 ---
@@ -11,7 +11,7 @@ Setiap anggota tim memegang **satu modul teknis utama** sekaligus memegang **sat
 
 | Anggota Tim | Jabatan Komunitas | Track Teknis | Modul Fitur & Tugas Utama |
 | :--- | :--- | :--- | :--- |
-| **Rafli** *(Lead)* | **Ketua (President)** | **Core Architecture & RBAC** | • Setup arsitektur folder (`models/`, `services/`)<br>• Logika otorisasi peran & alur approval event Ketua<br>• Gatekeeper Git (Final Review & Merge PR ke `main`) |
+| **Rafli** | **Ketua (President)** | **Core Architecture & RBAC** | • Setup arsitektur folder (`models/`, `services/`)<br>• Logika otorisasi peran & alur approval event Ketua<br>• Gatekeeper Git (Final Review & Merge PR ke `main`) |
 | **Dika** | **Bendahara** | **Finansial & Verifikasi Kas** | • Modul Kas Komunitas (`lib/services/kas_service.dart`)<br>• UI Catat Kas Masuk/Keluar & Transparansi Saldo<br>• Dialog verifikasi struk transfer pendaftaran event |
 | **Alfa** | **Sekretaris** | **Event Management & Publikasi** | • Modul Event (`lib/services/event_service.dart`)<br>• Formulir input & edit agenda kejuaraan/latber<br>• Pengelolaan kuota starter & regulasi teknis |
 | **Raihan** | **Wakil Ketua / Ofisial** | **Telemetri & Leaderboard** | • Modul Telemetri (`lib/services/telemetry_service.dart`)<br>• Form input sensor finish (Reaction & Elapsed Time)<br>• Tampilan klasemen realtime (`leaderboard_screen.dart`) |
@@ -58,14 +58,14 @@ lib/
    * `feat/nama-fitur-nama` (contoh: `feat/kas-service-dika`, `feat/event-form-alfa`)
    * `fix/nama-bug-nama` (contoh: `fix/telemetry-calc-raihan`)
    * `refactor/nama-modul-nama` (contoh: `refactor/split-tabs-rafli`)
-3. **Peer Review Wajib:** Setiap PR harus di-review oleh rekan pasangan sebelum disetujui oleh Rafli (Lead).
+3. **Peer Review Wajib:** Setiap PR harus di-review oleh rekan pasangan sebelum disetujui oleh Rafli.
 
 ---
 
 ### 3.2 Pasangan Reviewer Silang (Peer Review Partner)
 * **Dika (Kas)** $\leftrightarrow$ **Ferdi (Pendaftaran Pembalap)** *(Karena alur bukti bayar Ferdi diverifikasi oleh Dika)*.
 * **Alfa (Event)** $\leftrightarrow$ **Raihan (Telemetri Balap)** *(Karena event yang dibuat Alfa menerima hasil balap dari Raihan)*.
-* **Rafli (Lead)** melakukan *Final Check & Merge* ke branch `main`.
+* **Rafli** melakukan *Final Check & Merge* ke branch `main`.
 
 ---
 
