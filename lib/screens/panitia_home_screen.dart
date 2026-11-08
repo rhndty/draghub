@@ -202,8 +202,6 @@ class _PanitiaHomeScreenState extends State<PanitiaHomeScreen> {
                         const SizedBox(height: 16),
                         _buildPanitiaStatusBadge(),
                         const SizedBox(height: 16),
-                        _buildTabSelector(),
-                        const SizedBox(height: 16),
                       ],
                     ),
                   ),
@@ -332,57 +330,7 @@ class _PanitiaHomeScreenState extends State<PanitiaHomeScreen> {
     );
   }
 
-  Widget _buildTabSelector() {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.segmentBackground,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(child: _buildTabButton(0, 'PEMBAYARAN')),
-          Expanded(child: _buildTabButton(1, 'TELEMETRI')),
-          Expanded(child: _buildTabButton(2, 'EVENT')),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildTabButton(int index, String title) {
-    final isSelected = _selectedTabIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedTabIndex = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : [],
-        ),
-        child: Center(
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-              letterSpacing: 0.8,
-              color: isSelected ? AppColors.primaryMaroon : AppColors.textMuted,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildCurrentTabView() {
     switch (_selectedTabIndex) {
