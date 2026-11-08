@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
-import 'home_screen.dart'; // <-- Tanda // sudah dihapus agar halaman Home dikenali
+import 'home_screen.dart';
 import 'register_screen.dart';
+import 'panitia_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -57,16 +59,55 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
       );
 
-      _showMessage('Berhasil masuk sebagai ${isRacerTab ? 'Pembalap' : 'Panitia'}');
+      // Cek role pengguna di database Firestore
+      String userRole = '';
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .get();
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data()!;
+          userRole = (data['role'] ?? '').toString().toLowerCase().trim();
+        } else {
+          final queryByEmail = await FirebaseFirestore.instance
+              .collection('users')
+              .where('email', isEqualTo: email)
+              .limit(1)
+              .get();
+          if (queryByEmail.docs.isNotEmpty) {
+            final data = queryByEmail.docs.first.data();
+            userRole = (data['role'] ?? '').toString().toLowerCase().trim();
+          }
+        }
+      } catch (e) {
+        debugPrint('Error saat membaca role: $e');
+      }
+
+      // Jika role belum terdaftar di database, gunakan tab login aktif
+      if (userRole.isEmpty) {
+        userRole = isRacerTab ? 'racer' : 'panitia';
+      }
+
+      final bool isPanitia = (userRole == 'panitia' ||
+          userRole == 'ketua' ||
+          userRole == 'wakil' ||
+          userRole == 'sekretaris' ||
+          userRole == 'bendahara');
+
+      _showMessage('Berhasil masuk sebagai ${isPanitia ? "Panitia" : "Pembalap"}');
       
-      // Jeda 1 detik agar pesan sukses terbaca oleh pengguna
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(milliseconds: 600));
       
-      // Navigasi ke beranda jika login berhasil (Tanda // sudah dihapus)
       if (mounted) {
         Navigator.pushReplacement(
           context, 
-          MaterialPageRoute(builder: (context) => const HomeScreen())
+          MaterialPageRoute(
+            builder: (context) => isPanitia 
+                ? const PanitiaHomeScreen() 
+                : const HomeScreen(),
+          ),
         );
       }
       
@@ -130,6 +171,19 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 40),
 
+              Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.toggleBackground,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(child: _buildRoleToggle(title: 'Pembalap', icon: Icons.sports_motorsports_outlined, isSelected: isRacerTab, onTap: () => setState(() => isRacerTab = true))),
+                    Expanded(child: _buildRoleToggle(title: 'Panitia', icon: Icons.flag_outlined, isSelected: !isRacerTab, onTap: () => setState(() => isRacerTab = false))),
+                  ],
+                ),
+              ),
 
               const SizedBox(height: 32),
 
@@ -188,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    disabledBackgroundColor: AppColors.primary.withOpacity(0.7),
+                    disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.7),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -217,12 +271,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('ATAU', style: TextStyle(color: AppColors.textSubtitle.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.bold)),
+                    child: Text('ATAU', style: TextStyle(color: AppColors.textSubtitle.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                   const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
                 ],
               ),
               const SizedBox(height: 24),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildSocialButton(Icons.face, onTap: () {}),
+                  const SizedBox(width: 16),
+                  _buildSocialButton(Icons.g_mobiledata, iconSize: 32, onTap: () {}),
+                ],
+              ),
 
               const SizedBox(height: 48),
 
@@ -281,7 +344,7 @@ class _LoginScreenState extends State<LoginScreen> {
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
+          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
         ),
         child: Center(
           child: Row(
@@ -317,7 +380,7 @@ class _LoginScreenState extends State<LoginScreen> {
         style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(color: isPassword ? AppColors.textSubtitle : AppColors.primary.withOpacity(0.4)),
+          hintStyle: TextStyle(color: isPassword ? AppColors.textSubtitle : AppColors.primary.withValues(alpha: 0.4)),
           prefixIcon: Icon(prefixIcon, color: AppColors.textSecondary, size: 20),
           suffixIcon: isPassword
               ? IconButton(

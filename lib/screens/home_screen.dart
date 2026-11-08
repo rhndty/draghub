@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-
-import '../theme/app_colors.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import '../theme/app_colors.dart';
 import 'leaderboard_screen.dart';
-
-// import 'leaderboard_screen.dart'; // Aktifkan jika layar leaderboard sudah dipasang ke navigasi bawah
+import 'login_screen.dart';
+import 'panitia_home_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,7 +25,9 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.background,
       body: _bottomNavIndex == 1
           ? const LeaderboardScreen()
-          : SafeArea(
+          : _bottomNavIndex == 2
+              ? const PanitiaHomeScreen()
+              : SafeArea(
               child: Column(
                 children: [
                   // Bagian Header Tetap (Tidak ikut terscroll agar selalu terlihat)
@@ -88,10 +88,42 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        const CircleAvatar(
-          radius: 18,
-          backgroundColor: AppColors.primaryMaroon,
-          child: Icon(Icons.person, color: Colors.white, size: 20),
+        GestureDetector(
+          onTap: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Keluar dari Paddock'),
+                content: const Text('Apakah Anda ingin keluar dari akun Pembalap?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Batal'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryMaroon),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Keluar', style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            );
+            if (confirm == true) {
+              await FirebaseAuth.instance.signOut();
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (c) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            }
+          },
+          child: const CircleAvatar(
+            radius: 18,
+            backgroundColor: AppColors.primaryMaroon,
+            child: Icon(Icons.person, color: Colors.white, size: 20),
+          ),
         ),
       ],
     );
