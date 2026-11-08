@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme/app_colors.dart';
 
 class AdminFinancialScreen extends StatefulWidget {
@@ -9,75 +10,125 @@ class AdminFinancialScreen extends StatefulWidget {
 }
 
 class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
-  int _adminNavIndex = 1; // 1 = Finansial
+  final int _adminNavIndex = 1; // 1 = Finansial
+  int _selectedTab = 0; // 0 = Menunggu, 1 = Disetujui, 2 = Ditolak
+
+  // FUNGSI DINAMIS: Mengupdate status pembayaran di Firestore
+  Future<void> _updatePaymentStatus(String docId, String newStatus) async {
+    try {
+      await FirebaseFirestore.instance.collection('payments').doc(docId).update({
+        'status': newStatus,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Gagal update status: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: _buildAdminAppBar(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildRoleHeader(),
-            const SizedBox(height: 20),
-            _buildSummaryCards(),
-            const SizedBox(height: 20),
-            _buildTabSelector(),
-            const SizedBox(height: 24),
-            _buildQueueHeader(),
-            const SizedBox(height: 12),
-            _buildVerificationQueue(),
-            const SizedBox(height: 24),
-            _buildHistorySection(),
-            const SizedBox(height: 32),
-          ],
-        ),
+      // 1. STREAM BUILDER UTAMA: Menarik data koleksi 'payments'
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('payments')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.primaryMaroon));
+          }
+
+          final List<DocumentSnapshot> docs = snapshot.hasData ? snapshot.data!.docs : [];
+          
+          int pendingCount = 0;
+          int approvedCount = 0;
+          int rejectedCount = 0;
+          double totalVerifiedAmount = 0;
+
+          List<DocumentSnapshot> pendingList = [];
+          List<DocumentSnapshot> approvedList = [];
+          List<DocumentSnapshot> rejectedList = [];
+
+          // 2. MENGHITUNG STATISTIK & MEMISAHKAN DATA BERDASARKAN STATUS
+          for (var doc in docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = data['status'] ?? 'PENDING';
+            
+            if (status == 'PENDING') {
+              pendingCount++;
+              pendingList.add(doc);
+            } else if (status == 'APPROVED') {
+              approvedCount++;
+              approvedList.add(doc);
+              totalVerifiedAmount += (data['amount'] ?? 0);
+            } else if (status == 'REJECTED') {
+              rejectedCount++;
+              rejectedList.add(doc);
+            }
+          }
+
+          // Format Uang Dinamis (Tanpa package intl agar aman)
+          String verifiedAmountStr = totalVerifiedAmount > 1000000 
+              ? 'Rp ${(totalVerifiedAmount / 1000000).toStringAsFixed(1)}M' 
+              : 'Rp ${totalVerifiedAmount.toStringAsFixed(0)}';
+          if (totalVerifiedAmount == 0) verifiedAmountStr = 'Rp 0';
+
+          // List mana yang ditampilkan tergantung Tab yang diklik
+          List<DocumentSnapshot> activeList = _selectedTab == 0 ? pendingList : (_selectedTab == 1 ? approvedList : rejectedList);
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildRoleHeader(),
+                const SizedBox(height: 20),
+                _buildSummaryCards(verifiedAmountStr, approvedCount, pendingCount, rejectedCount),
+                const SizedBox(height: 20),
+                _buildTabSelector(pendingCount, approvedCount, rejectedCount),
+                const SizedBox(height: 24),
+                _buildQueueHeader(),
+                const SizedBox(height: 12),
+                _buildVerificationQueue(activeList),
+                const SizedBox(height: 24),
+                if (_selectedTab == 0 && approvedList.isNotEmpty) _buildHistorySection(approvedList.first),
+                const SizedBox(height: 32),
+              ],
+            ),
+          );
+        },
       ),
+      bottomNavigationBar: _buildAdminBottomNav(),
     );
   }
 
-  // --- 1. APP BAR KHUSUS ADMIN ---
+  // --- KOMPONEN UI STATIS HEADER ---
   PreferredSizeWidget _buildAdminAppBar() {
     return AppBar(
       backgroundColor: Colors.white,
       elevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: AppColors.textDark, size: 20),
-        onPressed: () => Navigator.pop(context),
-      ),
+      automaticallyImplyLeading: false, 
       title: Row(
         children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(color: AppColors.primaryMaroon, borderRadius: BorderRadius.circular(6)),
+            child: const Icon(Icons.flag, color: Colors.white, size: 14),
+          ),
           const SizedBox(width: 8),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
-              Text('ADMIN', style: TextStyle(color: AppColors.textDark, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-              Text('VERIFIKATOR KEUANGAN', style: TextStyle(color: AppColors.textMuted, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+              Text('APEX DRAG', style: TextStyle(color: AppColors.textDark, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+              Text('OFFICIAL PORTAL', style: TextStyle(color: AppColors.textMuted, fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
             ],
           )
         ],
       ),
       actions: [
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFDF2F2),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.primaryMaroon.withOpacity(0.2)),
-          ),
-          child: Row(
-            children: const [
-              Icon(Icons.shield_outlined, color: AppColors.primaryMaroon, size: 14),
-              SizedBox(width: 4),
-              Icon(Icons.keyboard_arrow_down, color: AppColors.primaryMaroon, size: 14),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
         const Padding(
           padding: EdgeInsets.only(right: 16.0),
           child: CircleAvatar(radius: 16, backgroundColor: AppColors.primaryMaroon, child: Icon(Icons.person, color: Colors.white, size: 18)),
@@ -86,7 +137,6 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
     );
   }
 
-  // --- 2. HEADER PERAN & STATUS MUTASI ---
   Widget _buildRoleHeader() {
     return Column(
       children: [
@@ -130,7 +180,7 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
                 _buildBankStatus('QRIS'),
               ],
             ),
-            const Text('10:42:19 WIB', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.0)),
+            const Text('LIVE SYNC', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.0)),
           ],
         )
       ],
@@ -147,40 +197,31 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
     );
   }
 
-  // --- 3. KARTU RINGKASAN (SUMMARY CARDS) ---
-  Widget _buildSummaryCards() {
+  // --- UI DINAMIS BERDASARKAN STREAM ---
+  Widget _buildSummaryCards(String verifiedAmount, int approvedCount, int pendingCount, int rejectedCount) {
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
-            title: 'TERVERIFIKASI', 
-            icon: Icons.account_balance_wallet_outlined,
-            value: 'Rp 96.2M', 
-            subtitle: '148 Transaksi',
-            isActive: false,
-            indicatorColor: AppColors.primaryMaroon
+            title: 'TERVERIFIKASI', icon: Icons.account_balance_wallet_outlined,
+            value: verifiedAmount, subtitle: '$approvedCount Transaksi',
+            isActive: _selectedTab == 1, indicatorColor: AppColors.primaryMaroon
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            title: 'ANTREAN', 
-            icon: Icons.hourglass_top,
-            value: '12', 
-            subtitle: 'Bukti Bayar',
-            isActive: true,
-            bottomText: 'MENUNGGU\nAUDIT'
+            title: 'ANTREAN', icon: Icons.hourglass_top,
+            value: '$pendingCount', subtitle: 'Bukti Bayar',
+            isActive: _selectedTab == 0, bottomText: 'MENUNGGU\nAUDIT'
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            title: 'DITOLAK', 
-            icon: Icons.cancel_outlined,
-            value: '2', 
-            subtitle: 'Perlu\nKlarifikasi',
-            isActive: false,
-            indicatorColor: Colors.red
+            title: 'DITOLAK', icon: Icons.cancel_outlined,
+            value: '$rejectedCount', subtitle: 'Perlu\nKlarifikasi',
+            isActive: _selectedTab == 2, indicatorColor: Colors.red
           ),
         ),
       ],
@@ -226,96 +267,103 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
     );
   }
 
-  // --- 4. TAB SELECTOR ANTARA STATUS ---
-  Widget _buildTabSelector() {
+  Widget _buildTabSelector(int pendingCount, int approvedCount, int rejectedCount) {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.borderLight)),
       child: Row(
         children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(color: AppColors.primaryMaroon, borderRadius: BorderRadius.circular(8)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('MENUNGGU', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white)),
-                  const SizedBox(width: 6),
-                  Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)), child: const Text('12', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white))),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            child: Center(
-              child: RichText(text: const TextSpan(style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textMuted), children: [TextSpan(text: 'DISETUJUI  '), TextSpan(text: '148', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w900))])),
-            ),
-          ),
-          Expanded(
-            child: Center(
-              child: RichText(text: const TextSpan(style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textMuted), children: [TextSpan(text: 'DITOLAK  '), TextSpan(text: '2', style: TextStyle(color: AppColors.textDark, fontWeight: FontWeight.w900))])),
-            ),
-          ),
+          Expanded(child: _buildTabItem(0, 'MENUNGGU', pendingCount)),
+          Expanded(child: _buildTabItem(1, 'DISETUJUI', approvedCount)),
+          Expanded(child: _buildTabItem(2, 'DITOLAK', rejectedCount)),
         ],
       ),
     );
   }
 
+  Widget _buildTabItem(int index, String label, int count) {
+    bool isSelected = _selectedTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTab = index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(color: isSelected ? AppColors.primaryMaroon : Colors.transparent, borderRadius: BorderRadius.circular(8)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: isSelected ? Colors.white : AppColors.textMuted)),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), 
+              decoration: BoxDecoration(color: isSelected ? Colors.white.withOpacity(0.2) : AppColors.segmentBackground, borderRadius: BorderRadius.circular(10)), 
+              child: Text('$count', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : AppColors.textDark))
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildQueueHeader() {
+    String title = _selectedTab == 0 ? 'Antrean Verifikasi' : (_selectedTab == 1 ? 'Transaksi Disetujui' : 'Transaksi Ditolak');
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
-          children: const [
-            Icon(Icons.receipt_long_outlined, color: AppColors.primaryMaroon, size: 16),
-            SizedBox(width: 8),
-            Text('Antrean Verifikasi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+          children: [
+            const Icon(Icons.receipt_long_outlined, color: AppColors.primaryMaroon, size: 16),
+            const SizedBox(width: 8),
+            Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.textDark)),
           ],
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(color: AppColors.segmentBackground, borderRadius: BorderRadius.circular(4)),
-          child: const Text('BATCH #04', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppColors.textMuted, letterSpacing: 1.0)),
+          child: const Text('LIVE DB', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: AppColors.textMuted, letterSpacing: 1.0)),
         ),
       ],
     );
   }
 
-  // --- 5. DAFTAR ANTREAN (QUEUE LIST) ---
-  Widget _buildVerificationQueue() {
+  Widget _buildVerificationQueue(List<DocumentSnapshot> activeList) {
+    if (activeList.isEmpty) {
+      return Container(
+        width: double.infinity, padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.borderLight)),
+        child: const Text('Tidak ada data transaksi di kategori ini.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold)),
+      );
+    }
+
     return Column(
-      children: [
-        // Kartu 1: Normal
-        _buildQueueCard(
-          name: 'Raka Aditia', startNumber: '#402',
-          className: 'Bebek 200cc TU Paddock',
-          paymentMethod: 'BCA TRANSFER', refNumber: '8820419',
-          amount: 'Rp 700.000', amountStatus: 'REGISTRASI FINAL',
-          actions: _buildActionsNormal(),
-        ),
-        const SizedBox(height: 12),
-        // Kartu 2: Auto Matched (Instant)
-        _buildQueueCard(
-          name: 'Dimas Arya', startNumber: '#105',
-          className: 'Sport 2T 155cc Frame STD',
-          paymentMethod: 'QRIS APEX INSTANT',
-          amount: 'Rp 700.105', amountStatus: 'AUTO-MATCHED', statusColor: const Color(0xFF2E7D32),
-          isAutoMatched: true,
-          actions: _buildActionsInstant(),
-        ),
-        const SizedBox(height: 12),
-        // Kartu 3: Anomaly (Warning)
-        _buildQueueCard(
-          name: 'Bagas Saputra', startNumber: '#312',
-          className: 'FFA 350cc Non Matic',
-          paymentMethod: 'MANDIRI TRANSFER', refNumber: '991204',
-          amount: 'Rp 850.000', amountStatus: 'FFA CLASS TIER',
-          warningMessage: 'Nama pengirim di rekening (HENDRA SAPUTRA) berbeda dengan data KTA IMI (BAGAS SAPUTRA).',
-          actions: _buildActionsWarning(),
-        ),
-      ],
+      children: activeList.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final docId = doc.id;
+        
+        // Format angka ke format uang indonesia tanpa package tambahan
+        final amountVal = data['amount'] ?? 0;
+        final amountFormatted = 'Rp ${amountVal.toString().replaceAll(RegExp(r'\B(?=(\d{3})+(?!\d))'), ".")}';
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: _buildQueueCard(
+            name: data['racerName'] ?? 'Anonim', startNumber: data['startNumber'] ?? '#---',
+            className: data['className'] ?? 'Kelas Balap',
+            paymentMethod: data['paymentMethod'] ?? 'TRANSFER BANK', refNumber: data['refNumber'],
+            amount: amountFormatted, amountStatus: data['amountStatus'] ?? 'REGISTRASI',
+            statusColor: _getStatusColor(data['status'] ?? 'PENDING'),
+            isAutoMatched: data['isAutoMatched'] ?? false,
+            warningMessage: data['warningMessage'],
+            actions: _buildActionsForStatus(data['status'] ?? 'PENDING', docId, data['isAutoMatched'] ?? false, data['warningMessage'] != null),
+          ),
+        );
+      }).toList(),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    if (status == 'APPROVED') return const Color(0xFF2E7D32);
+    if (status == 'REJECTED') return Colors.red;
+    return AppColors.textMuted;
   }
 
   Widget _buildQueueCard({
@@ -332,21 +380,19 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Thumbnail Struk
               Container(
                 width: 48, height: 48,
                 decoration: BoxDecoration(color: AppColors.segmentBackground, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.borderLight)),
-                child: const Icon(Icons.receipt, color: AppColors.textMuted, size: 24), // Placeholder untuk struk
+                child: const Icon(Icons.receipt, color: AppColors.textMuted, size: 24),
               ),
               const SizedBox(width: 12),
-              // Info Pembalap & Kelas
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+                        Flexible(child: Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: AppColors.textDark), overflow: TextOverflow.ellipsis)),
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -378,7 +424,6 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
                   ],
                 ),
               ),
-              // Jumlah Transfer
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -401,24 +446,12 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
                   const Icon(Icons.info_outline, size: 14, color: AppColors.textMuted),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: RichText(
-                      text: TextSpan(
-                        style: const TextStyle(fontSize: 9, color: AppColors.textDark, height: 1.4),
-                        children: [
-                          const TextSpan(text: 'Perhatian: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: warningMessage.split('(HENDRA SAPUTRA)')[0]),
-                          const TextSpan(text: '(HENDRA SAPUTRA)', style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.primaryMaroon)),
-                          TextSpan(text: warningMessage.split('(HENDRA SAPUTRA)')[1].split('(BAGAS SAPUTRA)')[0]),
-                          const TextSpan(text: '(BAGAS SAPUTRA).', style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.textDark)),
-                        ],
-                      ),
-                    ),
+                    child: Text(warningMessage, style: const TextStyle(fontSize: 9, color: AppColors.textDark, height: 1.4)),
                   ),
                 ],
               ),
             ),
           ],
-
           const SizedBox(height: 16),
           actions,
         ],
@@ -426,8 +459,31 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
     );
   }
 
-  // Baris Tombol Aksi - Normal
-  Widget _buildActionsNormal() {
+  // --- TOMBOL AKSI DINAMIS MENGHUBUNGI FIRESTORE ---
+  Widget _buildActionsForStatus(String status, String docId, bool isAutoMatched, bool hasWarning) {
+    if (status == 'APPROVED') {
+      return OutlinedButton.icon(
+        onPressed: () {},
+        style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 36), backgroundColor: const Color(0xFFE8F5E9), side: BorderSide.none, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+        icon: const Icon(Icons.check_circle, size: 14, color: Color(0xFF2E7D32)),
+        label: const Text('TRANSAKSI TELAH DISETUJUI', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32), letterSpacing: 0.5)),
+      );
+    } else if (status == 'REJECTED') {
+      return OutlinedButton.icon(
+        onPressed: () {},
+        style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 36), backgroundColor: const Color(0xFFFDF2F2), side: BorderSide.none, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+        icon: const Icon(Icons.cancel, size: 14, color: Colors.red),
+        label: const Text('TRANSAKSI TELAH DITOLAK', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.red, letterSpacing: 0.5)),
+      );
+    } else {
+      // Pending actions
+      if (isAutoMatched) return _buildActionsInstant(docId);
+      if (hasWarning) return _buildActionsWarning(docId);
+      return _buildActionsNormal(docId);
+    }
+  }
+
+  Widget _buildActionsNormal(String docId) {
     return Row(
       children: [
         Expanded(
@@ -443,7 +499,7 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
         Expanded(
           flex: 2,
           child: OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: () => _updatePaymentStatus(docId, 'REJECTED'),
             style: OutlinedButton.styleFrom(backgroundColor: const Color(0xFFFDF2F2), side: BorderSide.none, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
             icon: const Icon(Icons.close, size: 12, color: AppColors.primaryMaroon),
             label: const Text('TOLAK', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.primaryMaroon, letterSpacing: 0.5)),
@@ -453,7 +509,7 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
         Expanded(
           flex: 3,
           child: ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () => _updatePaymentStatus(docId, 'APPROVED'),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryMaroon, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
             icon: const Icon(Icons.verified, size: 12, color: Colors.white),
             label: const Text('SETUJUI', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.0)),
@@ -463,8 +519,7 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
     );
   }
 
-  // Baris Tombol Aksi - Instan (Auto-Match)
-  Widget _buildActionsInstant() {
+  Widget _buildActionsInstant(String docId) {
     return Row(
       children: [
         Expanded(
@@ -480,7 +535,7 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
         Expanded(
           flex: 5,
           child: ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () => _updatePaymentStatus(docId, 'APPROVED'),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryMaroon, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
             icon: const Icon(Icons.bolt, size: 14, color: Colors.white),
             label: const Text('CEPAT SETUJUI', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.0)),
@@ -490,8 +545,7 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
     );
   }
 
-  // Baris Tombol Aksi - Peringatan
-  Widget _buildActionsWarning() {
+  Widget _buildActionsWarning(String docId) {
     return Row(
       children: [
         Expanded(
@@ -517,7 +571,7 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
         Expanded(
           flex: 3,
           child: ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () => _updatePaymentStatus(docId, 'APPROVED'),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryMaroon, elevation: 0, padding: const EdgeInsets.symmetric(vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
             icon: const Icon(Icons.check, size: 14, color: Colors.white),
             label: const Text('SETUJUI\nOVERRIDE', textAlign: TextAlign.center, style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5)),
@@ -527,8 +581,11 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
     );
   }
 
-  // --- 6. RIWAYAT TERAKHIR ---
-  Widget _buildHistorySection() {
+  Widget _buildHistorySection(DocumentSnapshot lastDoc) {
+    final data = lastDoc.data() as Map<String, dynamic>;
+    final amountVal = data['amount'] ?? 0;
+    final amountFormatted = 'Rp ${amountVal.toString().replaceAll(RegExp(r'\B(?=(\d{3})+(?!\d))'), ".")}';
+
     return Column(
       children: [
         Row(
@@ -541,7 +598,7 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
                 Text('Riwayat Terakhir Disetujui', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.textDark)),
               ],
             ),
-            const Text('2 MENIT LALU', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.0)),
+            const Text('BARU SAJA', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.0)),
           ],
         ),
         const SizedBox(height: 12),
@@ -557,20 +614,20 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
                   const SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text('Fandi Ahmad (#208)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.textDark)),
-                      SizedBox(height: 2),
-                      Text('BCA Auto-Clear', style: TextStyle(fontSize: 9, color: AppColors.textMuted)),
+                    children: [
+                      Text('${data['racerName'] ?? 'Anonim'} (${data['startNumber'] ?? '#---'})', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+                      const SizedBox(height: 2),
+                      Text(data['paymentMethod'] ?? 'Transfer', style: const TextStyle(fontSize: 9, color: AppColors.textMuted)),
                     ],
                   ),
                 ],
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
-                children: const [
-                  Text('Rp 700.000', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.textDark)),
-                  SizedBox(height: 2),
-                  Text('5 MNT LALU', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.5)),
+                children: [
+                  Text(amountFormatted, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+                  const SizedBox(height: 2),
+                  const Text('SELESAI', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.5)),
                 ],
               )
             ],
@@ -580,5 +637,44 @@ class _AdminFinancialScreenState extends State<AdminFinancialScreen> {
     );
   }
 
- 
+  // --- BOTTOM NAV ADMIN ---
+  Widget _buildAdminBottomNav() {
+    return Container(
+      height: 60,
+      decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: AppColors.borderLight))),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildNavIcon(0, Icons.view_sidebar_outlined, 'EVENT'),
+          _buildNavIcon(1, Icons.request_quote, 'FINANSIAL'),
+          _buildNavIcon(2, Icons.timer_outlined, 'TIMING'),
+          _buildNavIcon(3, Icons.assignment_ind_outlined, 'PETUGAS'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavIcon(int index, IconData icon, String label) {
+    final isSelected = _adminNavIndex == index;
+    final color = isSelected ? AppColors.primaryMaroon : AppColors.textMuted;
+    
+    return GestureDetector(
+      onTap: () {
+        if (index == 1) return;
+        Navigator.pop(context);
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 4),
+          Text(label, style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: color)),
+          if (isSelected) ...[
+            const SizedBox(height: 2),
+            Container(width: 3, height: 3, decoration: const BoxDecoration(color: AppColors.primaryMaroon, shape: BoxShape.circle))
+          ]
+        ],
+      ),
+    );
+  }
 }
