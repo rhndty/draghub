@@ -1,6 +1,6 @@
 # Entity Relationship Diagram (ERD) & Skema Firestore
 ## DragHub: Arsitektur Data Komunitas Balap Drag Resmi
-**Versi:** 1.0  
+**Versi:** 1.2 (Scrutineering Verification & Disqualification Audit Schema)  
 **Basis Data:** Google Cloud Firestore (Document NoSQL)  
 **Dokumen Terkait:** [PRD_DragHub.md](PRD_DragHub.md) | [Pembagian_Tugas_GitFlow.md](Pembagian_Tugas_GitFlow.md)
 
@@ -10,15 +10,17 @@
 
 ```mermaid
 erDiagram
-    USERS ||--o{ EVENTS : "creates/approves"
+    USERS ||--o{ MOTORCYCLES : "owns"
     USERS ||--o{ EVENT_REGISTRATIONS : "registers"
     USERS ||--o{ KAS_TRANSACTIONS : "records/audits"
-    USERS ||--o{ ANNOUNCEMENTS : "publishes"
+    USERS ||--o{ EVENTS : "creates/approves"
     
+    EVENTS ||--o{ EVENT_CLASSES : "has_categories"
     EVENTS ||--o{ EVENT_REGISTRATIONS : "hosts"
-    EVENTS ||--o{ RACE_RESULTS : "tracks"
+    EVENT_CLASSES ||--o{ EVENT_REGISTRATIONS : "classifies"
     
-    USERS ||--o{ RACE_RESULTS : "rider_results"
+    MOTORCYCLES ||--o{ EVENT_REGISTRATIONS : "participates_with"
+    EVENT_REGISTRATIONS ||--o{ RACE_RESULTS : "scores"
 
     USERS {
         string uid PK "Firebase Auth UID"
@@ -26,36 +28,58 @@ erDiagram
         string fullName
         string phoneNumber
         string role "anggota | ketua | wakil | sekretaris | bendahara"
-        string riderClass "NOVICE | BRACKET_8 | BRACKET_9 | PRO"
-        string startNumber "Nomor motor di paddock"
-        string profileUrl
+        timestamp createdAt
+    }
+
+    MOTORCYCLES {
+        string bikeId PK "Auto ID"
+        string userId FK "Ref ke users"
+        string brand "Honda | Yamaha | Suzuki | Vespa | Kawasaki"
+        string modelName "Vario | Sprint | Aerox | Mx King | CBR"
+        string vehicleType "MATIC | KOPLING"
+        number pistonDiameterMm "Ukuran piston saat daftar (contoh: 59, 62, 63, 66)"
         timestamp createdAt
     }
 
     EVENTS {
         string eventId PK "Auto ID"
         string title "Nama Kejuaraan/Latber"
-        string description
-        string location "Sirkuit / Tempat"
+        string location "Sirkuit/Lokasi"
         timestamp eventDate
-        number registrationFee "Biaya pendaftaran (Rp)"
-        int quota "Maksimal starter"
+        number registrationFee "Biaya pendaftaran per kelas (Rp)"
         string status "DRAFT | PUBLISHED | COMPLETED"
         string createdBy FK "uid Sekretaris"
         string approvedBy FK "uid Ketua/Wakil"
         timestamp createdAt
     }
 
+    EVENT_CLASSES {
+        string classId PK "Auto ID (subkoleksi events)"
+        string eventId FK "Ref ke events"
+        string className "Contoh: Matic s.d 63mm"
+        string vehicleType "MATIC | KOPLING"
+        number maxPistonDiameterMm "Batas piston maksimal (contoh: 63, 66)"
+    }
+
     EVENT_REGISTRATIONS {
         string registrationId PK "Auto ID"
         string eventId FK "Ref ke events"
+        string classId FK "Ref ke event_classes"
         string userId FK "Ref ke users"
-        string riderName "Denormalized untuk kueri cepat"
-        string startNumber
-        string bikeSpec "Contoh: Ninja 150 Frame STD"
-        string paymentProofUrl "URL Cloud Storage"
-        string paymentStatus "PENDING | VERIFIED | REJECTED"
-        string verifiedBy FK "uid Bendahara"
+        string bikeId FK "Ref ke motorcycles"
+        string riderName "Denormalized nama pembalap"
+        string bikeName "Denormalized merk & nama motor"
+        string vehicleType "MATIC | KOPLING"
+        number pistonDiameterMm "Diameter piston motor pendaftar (mm)"
+        string paymentProofUrl "URL foto bukti transfer"
+        string paymentStatus "PENDING | PAID | REJECTED"
+        string verifiedBy FK "uid Bendahara (Dika)"
+        string assignedStartNumber "Nomor balap (Hanya muncul jika PAID)"
+        number measuredPistonMm "Hasil ukur fisik aktual jangka sorong saat scrut"
+        string scrutineeringStatus "PENDING | PASSED | DISQUALIFIED"
+        string disqualificationReason "Berita acara alasan resmi jika didiskualifikasi"
+        string scrutineeredBy FK "uid Sekretaris/Ofisial pemeriksa (Alfa/Raihan)"
+        timestamp scrutineeredAt "Waktu verifikasi scrutineering"
         timestamp registeredAt
         timestamp verifiedAt
     }
@@ -63,39 +87,26 @@ erDiagram
     RACE_RESULTS {
         string resultId PK "Auto ID"
         string eventId FK "Ref ke events"
-        string userId FK "Ref ke users"
-        string riderName "Nama pembalap"
-        string startNumber "Nomor start balap"
+        string registrationId FK "Ref ke event_registrations"
+        string startNumber "Nomor balap resmi pembalap"
         string lane "LANE 01 | LANE 02"
-        string stage "QUALIFYING | ELIMINATION | FINAL"
-        number reactionTime "Waktu reaksi sensor start (detik)"
+        string stage "QUALIFYING | FINAL"
+        number reactionTime "Waktu reaksi lampu hijau (detik)"
         number elapsedTime "Waktu tempuh sensor finish (detik)"
-        number topSpeedKmh "Kecepatan maksimal"
-        string status "VALID | JUMP_START | DNF"
-        string recordedBy FK "uid Ofisial/Wakil"
+        number totalTime "RT + ET (detik)"
+        string status "VALID | JUMP_START | DNF | DISQUALIFIED"
+        string recordedBy FK "uid Ofisial/Wakil (Raihan)"
         timestamp recordedAt
     }
 
     KAS_TRANSACTIONS {
         string transactionId PK "Auto ID"
-        string title
-        string category "IURAN_ANGGOTA | PENDAFTARAN_EVENT | SEWA_SIRKUIT | HADIAH | LAINNYA"
+        string title "Contoh: Pendaftaran Event IDW #089"
+        string category "PENDAFTARAN_EVENT | IURAN_ANGGOTA | OPERASIONAL"
         string type "MASUK | KELUAR"
         number amount "Nominal uang (Rp)"
-        string receiptUrl "Foto nota/bukti"
-        string description
-        string recordedBy FK "uid Bendahara"
+        string recordedBy FK "uid Bendahara (Dika)"
         timestamp transactionDate
-        timestamp createdAt
-    }
-
-    ANNOUNCEMENTS {
-        string announcementId PK "Auto ID"
-        string title
-        string content
-        string priority "NORMAL | PENTING | DARURAT"
-        string authorId FK "uid Sekretaris/Ketua"
-        timestamp publishedAt
     }
 ```
 
@@ -103,157 +114,121 @@ erDiagram
 
 ## 2. Rincian Koleksi Cloud Firestore
 
-### 2.1 Koleksi: `users`
-* **Path:** `/users/{uid}`
-* **Kunci Dokumen:** `FirebaseAuth.currentUser.uid`
+### 2.1 Koleksi: `motorcycles`
+Menyimpan profil spesifikasi motor balap milik anggota komunitas.
+* **Path:** `/users/{uid}/motorcycles/{bikeId}` atau `/motorcycles/{bikeId}`
 
-| Field | Tipe Data | Wajib | Keterangan |
+| Field | Tipe Data | Wajib | Keterangan & Contoh Nilai |
 | :--- | :--- | :---: | :--- |
-| `uid` | String | Ya | ID unik dari Firebase Authentication |
-| `email` | String | Ya | Email login |
-| `fullName` | String | Ya | Nama lengkap pembalap / pengurus |
-| `phoneNumber` | String | Ya | Nomor WhatsApp aktif |
-| `role` | String | Ya | `'anggota'`, `'ketua'`, `'wakil'`, `'sekretaris'`, `'bendahara'` |
-| `riderClass` | String | Ya | Default: `'NOVICE'` |
-| `startNumber` | String | Tidak | Nomor start tetap motor (contoh: `'089'`) |
-| `profileUrl` | String | Tidak | URL foto profil dari Cloud Storage |
+| `bikeId` | String | Ya | ID dokumen unik |
+| `userId` | String | Ya | Foreign Key merujuk ke `/users/{uid}` |
+| `brand` | String | Ya | `'Honda'`, `'Yamaha'`, `'Suzuki'`, `'Vespa'`, `'Kawasaki'` |
+| `modelName` | String | Ya | Contoh: `'Vario 125'`, `'Aerox 155'`, `'Mx King'`, `'Sprint 150'` |
+| `vehicleType` | String | Ya | `'MATIC'` atau `'KOPLING'` |
+| `pistonDiameterMm` | Number | Ya | Ukuran diameter piston dalam mm (contoh: `59`, `60`, `62`, `63`, `66`) |
 | `createdAt` | Timestamp | Ya | `FieldValue.serverTimestamp()` |
 
 ---
 
-### 2.2 Koleksi: `events`
-* **Path:** `/events/{eventId}`
+### 2.2 Koleksi: `event_classes` (Subkoleksi Event)
+Menentukan kelas balap resmi berdasarkan tipe motor dan batas maksimal diameter piston.
+* **Path:** `/events/{eventId}/classes/{classId}`
 
-| Field | Tipe Data | Wajib | Keterangan |
+| Field | Tipe Data | Wajib | Keterangan & Contoh Nilai |
 | :--- | :--- | :---: | :--- |
-| `eventId` | String | Ya | ID unik dokumen Firestore |
-| `title` | String | Ya | Nama kejuaraan (contoh: *IDW Round 3 2026*) |
-| `description` | String | Ya | Regulasi teknis dan rundown jadwal |
-| `location` | String | Ya | Sirkuit (contoh: *NP Gelora Bung Tomo*) |
-| `eventDate` | Timestamp | Ya | Tanggal dan jam pelaksanaan event |
-| `registrationFee` | Number | Ya | Biaya pendaftaran per kelas motor (Rp) |
-| `quota` | Integer | Ya | Batas maksimal pembalap per kelas |
-| `status` | String | Ya | `'DRAFT'`, `'PUBLISHED'`, `'COMPLETED'` |
-| `createdBy` | String | Ya | UID akun **Sekretaris** pembuat draft |
-| `approvedBy` | String | Tidak | UID akun **Ketua / Wakil** yang mengesahkan |
-| `createdAt` | Timestamp | Ya | Timestamp saat draft dibuat |
+| `classId` | String | Ya | ID unik kelas balap |
+| `className` | String | Ya | Contoh: `'Matic s.d 63mm'`, `'Kopling s.d 66mm'` |
+| `vehicleType` | String | Ya | `'MATIC'` atau `'KOPLING'` |
+| `maxPistonDiameterMm` | Number | Ya | **Batas maksimal piston** (contoh: `63`, `66`). Piston motor tidak boleh melebihi batas ini. |
 
 ---
 
 ### 2.3 Koleksi: `event_registrations`
+Pendaftaran kejuaraan yang menghubungkan pembalap, motor, status pembayaran, dan hasil verifikasi scrutineering.
 * **Path:** `/event_registrations/{registrationId}`
 
-| Field | Tipe Data | Wajib | Keterangan |
+| Field | Tipe Data | Wajib | Keterangan & Batasan |
 | :--- | :--- | :---: | :--- |
-| `registrationId`| String | Ya | ID pendaftaran unik |
-| `eventId` | String | Ya | Foreign Key merujuk ke `/events/{eventId}` |
-| `userId` | String | Ya | Foreign Key merujuk ke `/users/{uid}` |
-| `riderName` | String | Ya | Nama pembalap untuk render UI cepat |
-| `startNumber` | String | Ya | Nomor start motor yang didaftarkan |
-| `bikeSpec` | String | Ya | Tipe motor (contoh: *Ninja 150 Frame STD*) |
-| `paymentProofUrl` | String | Ya | URL gambar bukti transfer struk bank |
-| `paymentStatus` | String | Ya | `'PENDING'`, `'VERIFIED'`, `'REJECTED'` |
-| `verifiedBy` | String | Tidak | UID akun **Bendahara** yang memvalidasi |
-| `registeredAt` | Timestamp | Ya | Waktu pendaftaran dilakukan |
-| `verifiedAt` | Timestamp | Tidak | Waktu konfirmasi oleh bendahara |
+| `registrationId`| String | Ya | ID registrasi unik |
+| `eventId` | String | Ya | ID event kejuaraan balap |
+| `classId` | String | Ya | ID kelas balap yang diikuti |
+| `userId` | String | Ya | ID pembalap pendaftar |
+| `bikeId` | String | Ya | ID motor yang digunakan balap |
+| `vehicleType` | String | Ya | `'MATIC'` atau `'KOPLING'` |
+| `pistonDiameterMm` | Number | Ya | Diameter piston motor pendaftar yang didaftarkan (mm) |
+| `paymentProofUrl` | String | Ya | URL gambar foto struk transfer pendaftaran |
+| `paymentStatus` | String | Ya | `'PENDING'`, `'PAID'`, `'REJECTED'` |
+| `verifiedBy` | String | Tidak | **UID Bendahara (Dika)** yang memverifikasi struk bank |
+| `assignedStartNumber`| String? | **Kondisional** | **Nomor Balap Resmi** (contoh: `'#089'`). **Hanya terbit jika `paymentStatus == 'PAID'`**. Null jika belum lunas. |
+| `measuredPistonMm`| Number? | Tidak | **Hasil ukur aktual jangka sorong** di paddock saat scrutineering (contoh: `64.5`) |
+| `scrutineeringStatus`| String | Ya | `'PENDING'`, `'PASSED'`, `'DISQUALIFIED'` |
+| `disqualificationReason`| String? | Tidak | **Alasan Berita Acara Diskualifikasi** (contoh: *"Piston terukur 64.5mm overspec 1.5mm dari batas 63mm"*). Wajib diisi jika status = `'DISQUALIFIED'`. |
+| `scrutineeredBy` | String? | Tidak | **UID Sekretaris / Ofisial (Alfa / Raihan)** pemeriksa fisik motor |
+| `scrutineeredAt` | Timestamp? | Tidak | Waktu konfirmasi lolos atau diskualifikasi |
+| `registeredAt` | Timestamp | Ya | Waktu pendaftaran |
+| `verifiedAt` | Timestamp | Tidak | Waktu diverifikasi lunas oleh Bendahara |
 
 ---
 
-### 2.4 Koleksi: `race_results` (Telemetri & Leaderboard)
+### 2.4 Koleksi: `race_results` (Telemetri Sensor Balap)
 * **Path:** `/race_results/{resultId}`
 
 | Field | Tipe Data | Wajib | Keterangan |
 | :--- | :--- | :---: | :--- |
-| `resultId` | String | Ya | ID unik race timing |
-| `eventId` | String | Ya | ID kejuaraan terkait |
-| `userId` | String | Ya | UID pembalap |
-| `riderName` | String | Ya | Nama pembalap pada papan klasemen |
-| `startNumber` | String | Ya | Nomor motor start |
+| `resultId` | String | Ya | ID unik telemetri |
+| `eventId` | String | Ya | ID kejuaraan |
+| `registrationId`| String | Ya | ID registrasi peserta |
+| `startNumber` | String | Ya | Nomor balap pembalap (diambil dari `assignedStartNumber`) |
 | `lane` | String | Ya | `'LANE 01'` atau `'LANE 02'` |
-| `stage` | String | Ya | `'QUALIFYING'`, `'ELIMINATION'`, `'FINAL'` |
-| `reactionTime` | Number | Ya | Waktu reaksi lampu hijau (detik) |
-| `elapsedTime` | Number | Ya | **Waktu tempuh garis finish (detik)** |
-| `topSpeedKmh` | Number | Tidak | Kecepatan tertinggi saat finish |
-| `status` | String | Ya | `'VALID'`, `'JUMP_START'`, `'DNF'` |
-| `recordedBy` | String | Ya | UID ofisial/wakil pencatat telemetri |
-| `recordedAt` | Timestamp | Ya | Waktu pencatatan waktu |
+| `stage` | String | Ya | `'QUALIFYING'` atau `'FINAL'` |
+| `reactionTime` | Number | Ya | Waktu reaksi lampu start hijau (detik) |
+| `elapsedTime` | Number | Ya | Waktu tempuh garis finish (detik) |
+| `totalTime` | Number | Ya | Hasil `reactionTime + elapsedTime` |
+| `status` | String | Ya | `'VALID'`, `'JUMP_START'`, `'DNF'`, `'DISQUALIFIED'` |
+| `recordedBy` | String | Ya | UID ofisial pencatat waktu (Raihan/Wakil) |
+| `recordedAt` | Timestamp | Ya | Waktu pencatatan sensor |
 
 ---
 
-### 2.5 Koleksi: `kas_transactions` (Keuangan Komunitas)
-* **Path:** `/kas_transactions/{transactionId}`
+## 3. Logika Bisnis & Validasi Database (Business Logic)
 
-| Field | Tipe Data | Wajib | Keterangan |
-| :--- | :--- | :---: | :--- |
-| `transactionId` | String | Ya | ID transaksi kas |
-| `title` | String | Ya | Judul transaksi (contoh: *Iuran Kas Bulan November*) |
-| `category` | String | Ya | `'IURAN_ANGGOTA'`, `'PENDAFTARAN_EVENT'`, `'SEWA_SIRKUIT'`, `'HADIAH'`, `'OPERASIONAL'` |
-| `type` | String | Ya | `'MASUK'` atau `'KELUAR'` |
-| `amount` | Number | Ya | Nominal transaksi dalam Rupiah (Rp) |
-| `receiptUrl` | String | Tidak | Foto kuitansi / nota pengeluaran |
-| `description` | String | Tidak | Catatan tambahan mutasi kas |
-| `recordedBy` | String | Ya | UID akun **Bendahara** pencatat transaksi |
-| `transactionDate`| Timestamp | Ya | Tanggal mutasi dilakukan |
-
----
-
-## 3. Indeks Kueri Firestore (Compound Indexes)
-
-Untuk mencegah error kueri majemuk di Flutter, indeks komposit berikut disiapkan:
-1. **Leaderboard Tercepat:** `race_results` $\rightarrow$ `eventId` (ASC) + `status` (ASC) + `elapsedTime` (ASC)
-2. **Riwayat Buku Kas:** `kas_transactions` $\rightarrow$ `type` (ASC) + `transactionDate` (DESC)
-3. **Antrean Verifikasi Pendaftaran:** `event_registrations` $\rightarrow$ `eventId` (ASC) + `paymentStatus` (ASC) + `registeredAt` (ASC)
-
----
-
-## 4. Firestore Security Rules (Validasi Hak Akses Server-Side)
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    // Profil Pengguna
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (request.auth.uid == userId || getUserRole() == 'ketua');
-    }
-
-    // Manajemen Event
-    match /events/{eventId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && getUserRole() in ['sekretaris', 'ketua'];
-      allow update: if isAuthenticated() && getUserRole() in ['ketua', 'wakil', 'sekretaris'];
-    }
-
-    // Pendaftaran Event
-    match /event_registrations/{regId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && getUserRole() in ['bendahara', 'ketua'];
-    }
-
-    // Hasil Telemetri & Leaderboard
-    match /race_results/{resId} {
-      allow read: if isAuthenticated();
-      allow create, update: if isAuthenticated() && getUserRole() in ['wakil', 'sekretaris', 'ketua'];
-    }
-
-    // Kas Komunitas
-    match /kas_transactions/{transId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAuthenticated() && getUserRole() == 'bendahara';
-    }
+### 3.1 Aturan Pembayaran & Penerbitan Nomor Balap:
+* Ketika pendaftaran dibuat oleh pembalap:
+  ```json
+  {
+    "paymentStatus": "PENDING",
+    "assignedStartNumber": null,
+    "scrutineeringStatus": "PENDING"
   }
-}
-```
+  ```
+* Ketika **Bendahara (Dika)** menekan tombol "Verifikasi Lunas":
+  ```json
+  {
+    "paymentStatus": "PAID",
+    "verifiedBy": "uid_bendahara",
+    "verifiedAt": "2026-11-09T...",
+    "assignedStartNumber": "#089"
+  }
+  ```
 
+### 3.2 Aturan Validasi Scrutineering & Diskualifikasi:
+* Input: `measuredPistonMm` hasil pengukuran fisik oleh Sekretaris (Alfa).
+* Evaluasi:
+  * Jika `measuredPistonMm <= class.maxPistonDiameterMm`:
+    ```json
+    {
+      "scrutineeringStatus": "PASSED",
+      "scrutineeredBy": "uid_sekretaris",
+      "scrutineeredAt": "2026-11-09T..."
+    }
+    ```
+  * Jika `measuredPistonMm > class.maxPistonDiameterMm` (Melebihi batas):
+    Muncul dialog konfirmasi ganda $\rightarrow$ Petugas mengisi alasan $\rightarrow$ Firestore update:
+    ```json
+    {
+      "scrutineeringStatus": "DISQUALIFIED",
+      "disqualificationReason": "Piston terukur 64.5mm (Melebihi batas kelas 63.0mm)",
+      "scrutineeredBy": "uid_sekretaris",
+      "scrutineeredAt": "2026-11-09T..."
+    }
+    ```

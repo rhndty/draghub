@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
 ## DragHub: Sistem Informasi Komunitas & Manajemen Balap Drag Resmi
-**Versi:** 1.0  
-**Tanggal:** 8 November 2026  
+**Versi:** 1.2 (Scrutineering Verification & Disqualification Protocol Update)  
+**Tanggal:** 9 November 2026  
 **Status:** Approved for Development  
 **Platform:** Flutter Mobile (Android & iOS) + Google Firebase (Auth & Cloud Firestore)  
 **Dokumen Terkait:** [ERD_DragHub.md](ERD_DragHub.md) | [Pembagian_Tugas_GitFlow.md](Pembagian_Tugas_GitFlow.md)
@@ -12,128 +12,154 @@
 
 ### 1.1 Problem Statement
 Komunitas balap motor drag resmi di Indonesia menghadapi kendala operasional yang masih konvensional (tersebar di WhatsApp dan catatan fisik):
-1. **Pencatatan Keuangan Manual:** Iuran pendaftaran event balap dan kas komunitas rawan tidak transparan dan sulit direkap oleh bendahara.
-2. **Verifikasi Starter Lambat:** Pengecekan bukti transfer pendaftaran, legalitas kelas motor, dan nomor start paddock memakan waktu saat *scrutineering*.
-3. **Penyusunan Agenda & Persetujuan Event:** Pengajuan jadwal latihan bersama (latber) atau kejurda dari sekretaris sering tumpang tindih tanpa pengesahan resmi dari ketua organisasi.
-4. **Telemetri Balap & Leaderboard Terpisah:** Catatan waktu sensor garis finish (*Reaction Time* & *Elapsed Time*) terlambat dipublikasikan ke pembalap.
+1. **Regulasi Kelas Balap & Scrutineering:** Penentuan kelas motor drag resmi ditentukan secara ketat berdasarkan **Tipe Transmisi (Matic / Kopling)** dan **Ukuran Diameter Piston (mm)**. Pengukuran fisik (*scrutineering*) rawan manipulasi atau kesalahan teknis (*human error*) jika tidak tercatat dengan bukti kuat di sistem.
+2. **Pencatatan Keuangan & Verifikasi Pembayaran:** Pengecekan bukti transfer pendaftaran harus berada di bawah wewenang resmi **Bendahara**.
+3. **Penerbitan Nomor Balap yang Tertib:** Nomor start/balap tidak boleh diterbitkan sembarangan sebelum uang pendaftaran diverifikasi lunas oleh Bendahara.
+4. **Prosedur Diskualifikasi Resmi:** Diskualifikasi pembalap karena overspec piston membutuhkan mekanisme **konfirmasi ganda (*double-confirmation*)** dan catatan berita acara digital agar terhindar dari salah klik (*misclick*) dan sengketa protes pembalap di paddock.
 5. **Permintaan Dosen Praktikum:** Sistem harus merefleksikan hierarki organisasi resmi komunitas: **Ketua**, **Wakil Ketua**, **Sekretaris**, **Bendahara**, dan **Anggota (Pembalap)**.
 
 ### 1.2 Tujuan Produk (Goals)
-* **Arsitektur RBAC Modular:** Menerapkan sistem *Role-Based Access Control* di mana antarmuka pengguna tidak diduplikasi, melainkan hak akses menu dan tombol dinamis sesuai peran.
-* **Manajemen Event Terstruktur:** Alur pengajuan agenda balap oleh Sekretaris dan pengesahan (approval) oleh Ketua/Wakil Ketua.
-* **Transparansi Kas Komunitas:** Pencatatan kas masuk/keluar oleh Bendahara yang dapat diaudit oleh Ketua dan dipantau saldonya oleh seluruh anggota.
-* **Telemetri Balap Realtime:** Input waktu balap per lintasan (*Lane 01 / Lane 02*) yang langsung memperbarui papan klasemen (*Leaderboard*).
+* **Standardisasi Regulasi Piston:** Menerapkan validasi kelas balap berbasis batas diameter piston maksimal (contoh: *Matic 63*, *Kopling 66*). Piston $\le$ batas dinyatakan **Lolos Scrutineering**, sedangkan piston $>$ batas dinyatakan **Diskualifikasi (DQ)**.
+* **Protokol Verifikasi Diskualifikasi (Anti-Misclick):** Mengharuskan petugas scrutineering memasukkan ukuran aktual terukur dan mengonfirmasi dialog peringatan bertingkat sebelum mendiskualifikasi pembalap.
+* **Akuntabilitas Finansial & Auto-Start Number:** Verifikasi bukti transfer oleh Bendahara yang secara otomatis membuka/menerbitkan **Nomor Balap Resmi** bagi pembalap.
+* **Manajemen Profil Kendaraan Spesifik:** Form pendataan motor pembalap mencakup Merk, Nama Kendaraan, Tipe Kendaraan (Matic/Kopling), dan Diameter Piston (mm).
+* **Telemetri Balap & Leaderboard Realtime:** Input waktu balap per lintasan (*Lane 01 / Lane 02*) yang langsung memperbarui papan klasemen (*Leaderboard*).
 
 ---
 
-## 2. Struktur Organisasi & Pemetaan Persona
+## 2. Struktur Organisasi & Pembagian Kewenangan
 
-Sistem membagi pengguna ke dalam 5 entitas peran resmi:
-
-| Peran (Role) | Representasi Tim | Tanggung Jawab Utama dalam Aplikasi |
+| Peran (Role) | Personel Tim | Tanggung Jawab dalam Sistem |
 | :--- | :--- | :--- |
-| **Ketua (President)** | **Rafli** | • Pengawasan menyeluruh aktivitas komunitas<br>• Menyetujui (*Approve*) atau Menolak (*Reject*) draft event resmi<br>• Memantau laporan audit mutasi kas dari Bendahara |
-| **Wakil Ketua** | **Raihan** | • Membantu tugas eksekutif Ketua<br>• Otorisasi event cadangan jika Ketua berhalangan<br>• Pengawasan teknis telemetri balap |
-| **Sekretaris** | **Alfa** | • Menyusun agenda event balap resmi & latber (*Drafting Event*)<br>• Mengelola pengumuman dan regulasi teknis balap<br>• Merekap kuota dan verifikasi administrasi pembalap |
-| **Bendahara** | **Dika** | • Mencatat mutasi kas masuk dan keluar (uang sirkuit, iuran, pendaftaran)<br>• Memeriksa & memvalidasi bukti transfer pendaftaran event<br>• Menerbitkan transparansi saldo kas komunitas |
-| **Anggota (Pembalap/Rider)** | **Ferdi** | • Registrasi akun paddock dan melengkapi profil motor<br>• Mendaftar event balap dan mengunggah foto struk transfer<br>• Memantau klasemen catatan waktu di Leaderboard |
+| **Ketua (President)** | **Rafli** *(Project Lead)* | • Pengawasan menyeluruh aktivitas komunitas<br>• Menyetujui (*Approve*) atau Menolak draft event resmi<br>• Memantau laporan audit mutasi kas & log diskualifikasi peserta |
+| **Wakil Ketua** | **Raihan** | • Membantu tugas eksekutif Ketua<br>• Otorisasi event cadangan jika Ketua berhalangan<br>• Pengawasan teknis telemetri balap & pendampingan meja scrutineering |
+| **Sekretaris** | **Alfa** | • Menyusun agenda event balap & menentukan regulasi batas piston per kelas<br>• **Petugas Utama Meja Scrutineering:** Menginput hasil ukur fisik piston motor pembalap di paddock<br>• Melakukan verifikasi diskualifikasi peserta overspec dengan berita acara digital |
+| **Bendahara** | **Dika** | • **Memeriksa & memverifikasi bukti transfer pendaftaran event**<br>• Mengesahkan status pembayaran menjadi **LUNAS (PAID)** yang memicu terbitnya Nomor Balap pembalap<br>• Mencatat kas masuk/keluar & transparansi saldo komunitas *(Bendahara TIDAK mengurusi teknis mesin)* |
+| **Anggota (Pembalap/Rider)** | **Ferdi** | • Mendaftarkan profil motor (Merk, Nama Kendaraan, Tipe, Diameter Piston)<br>• Mendaftar kelas event & upload struk bukti transfer<br>• Menerima Nomor Balap resmi setelah diverifikasi Bendahara<br>• Menerima status hasil scrutineering resmi (Lolos / Diskualifikasi beserta alasannya) |
 
 ---
 
-## 3. Matriks Hak Akses (Role-Based Access Control / RBAC)
+## 3. Regulasi Kelas Balap & Protokol Scrutineering Piston
 
-| Fitur / Modul | Anggota (Rider) | Sekretaris | Bendahara | Ketua & Wakil |
-| :--- | :---: | :---: | :---: | :---: |
-| **Lihat Kalender Event & Leaderboard** | ✅ Read | ✅ Read | ✅ Read | ✅ Read |
-| **Daftar Event & Upload Bukti Bayar** | ✅ Create | ✅ Create | ✅ Create | ✅ Create |
-| **Buat / Edit Draft Event Balap** | ❌ | ✅ Create / Edit | ❌ | ✅ Full Access |
-| **Approval / Otorisasi Event Tayang** | ❌ | ❌ | ❌ | ✅ Approve / Reject |
-| **Input Data Telemetri (Waktu Balap)** | ❌ | ✅ Input (Ofisial) | ❌ | ✅ Full Access |
-| **Input Mutasi Kas (Masuk / Keluar)** | ❌ | ❌ | ✅ Create / Edit | ❌ (Hanya Audit) |
-| **Verifikasi Bukti Transfer Pendaftaran** | ❌ | ❌ | ✅ Approve / Reject | ✅ Monitoring |
-| **Akses Portal Khusus Pengurus** | ❌ | ✅ Tab Event | ✅ Tab Pembayaran | ✅ Full Tabs |
+### 3.1 Aturan Penentuan Kelas (Piston-Based Classes)
+Kelas balap pada DragHub ditentukan oleh **Tipe Kendaraan** dan **Batas Maksimal Diameter Piston**:
+1. **Kelas Matic (Batas Piston Maksimal):**
+   * Contoh: `MATIC_59` (Piston $\le$ 59 mm)
+   * Contoh: `MATIC_63` (Piston $\le$ 63 mm)
+2. **Kelas Kopling / Manual (Batas Piston Maksimal):**
+   * Contoh: `KOPLING_62` (Piston $\le$ 62 mm)
+   * Contoh: `KOPLING_66` (Piston $\le$ 66 mm)
+
+### 3.2 Ketentuan Logika Scrutineering (Inspeksi Fisik)
+* **Aturan Lolos:** Ukuran piston motor pembalap **HARUS $\le$ batas ketentuan kelas**.
+  * *Contoh Lolos:* Motor Vario dengan piston **62 mm** mendaftar di kelas **Matic 63** $\rightarrow$ **VALID (Lolos)** karena ukuran piston tidak melebihi batas maksimal.
+* **Aturan Diskualifikasi (DQ):** Jika ukuran piston motor **LEBIH BESAR ($>$) dari ketentuan kelas**, motor otomatis **DIDISKUALIFIKASI** dari kejuaraan.
+  * *Contoh Diskualifikasi:* Motor Aerox dengan piston **64.5 mm** mendaftar di kelas **Matic 63** $\rightarrow$ **DISKUALIFIKASI (DQ)** karena melebihi batas 63 mm.
 
 ---
 
-## 4. Alur Bisnis Utama (Core User Journeys)
+### 3.3 Protokol Dialog Konfirmasi & Verifikasi Diskualifikasi (Anti-Misclick)
+Untuk menjamin keadilan dan mencegah kesalahan operasional saat pemeriksaan fisik di paddock:
 
-### 4.1 Alur Pengajuan & Pengesahan Event (Sekretaris $\rightarrow$ Ketua $\rightarrow$ Anggota)
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Sek as Sekretaris (Alfa)
-    actor Ket as Ketua (Rafli)
-    actor Rider as Anggota (Ferdi)
-    participant App as DragHub App
-    participant DB as Cloud Firestore
-
-    Sek->>App: Input Formulir Event (Judul, Lokasi, Biaya, Kuota)
-    App->>DB: Simpan Event (status: "DRAFT")
-    Ket->>App: Buka Portal Pengurus -> Tab Approval
-    Ket->>App: Klik "Setujui Event"
-    App->>DB: Update Event (status: "PUBLISHED", approvedBy: uidKetua)
-    Rider->>App: Buka Beranda -> Muncul Event Baru
+flowchart TD
+    MejaScrut[Pembalap datang ke Meja Scrutineering] --> InputFisik[Sekretaris/Ofisial Input Hasil Ukur Piston Aktual]
+    InputFisik --> CekBatas{Piston Aktual <= Batas Kelas?}
+    
+    CekBatas -- YA (Contoh: 62mm <= 63mm) --> TombolLolos[Klik: Loloskan Motor]
+    TombolLolos --> StatusLolos[Status: SCRUT_PASSED / Boleh Masuk Lintasan]
+    
+    CekBatas -- TIDAK (Contoh: 64.5mm > 63mm) --> WarningSistem[Sistem Beri Warning Merah: OVERSPEC]
+    WarningSistem --> ModalKonfirmasi[Tampilkan AlertDialog Konfirmasi Diskualifikasi]
+    ModalKonfirmasi --> WajibCatatan[Wajib Isi Alasan & Angka Selisih: 'Piston 64.5mm over 1.5mm']
+    WajibCatatan --> EksekusiDQ[Klik Tombol Merah: KONFIRMASI DISKUALIFIKASI]
+    EksekusiDQ --> StatusDQ[Status: DISQUALIFIED / Pembalap Dicoret dari Balapan]
+    StatusDQ --> NotifPembalap[Aplikasi Pembalap Menampilkan Kartu Merah & Alasan Resmi]
 ```
 
-### 4.2 Alur Pendaftaran & Verifikasi Pembayaran (Anggota $\rightarrow$ Bendahara)
+#### Spesifikasi UI Dialog Konfirmasi Diskualifikasi:
+1. **Header Dialog:** Peringatan Berwarna Merah Tegas (`Icons.warning_amber_rounded`) bertuliskan *"KONFIRMASI DISKUALIFIKASI PEMBALAP"*.
+2. **Ringkasan Data Pembanding:**
+   * Nama Pembalap & Nomor Balap: Misal `#089 • Ferdi Rider`
+   * Batas Maksimal Kelas: **63.0 mm**
+   * Ukuran Terukur Aktual: **64.5 mm** *(Overspec +1.5 mm)*
+3. **Field Berita Acara / Alasan:**  
+   Input teks wajib yang menjelaskan metode ukur (contoh: *"Pengukuran fisik menggunakan jangka sorong mitutoyo di paddock menyatakan piston 64.5 mm"*).
+4. **Tombol Keputusan:**
+   * Tombol Batal / Ukur Ulang.
+   * Tombol Merah: **"Tetapkan Diskualifikasi"** (Mengubah status menjadi `DISQUALIFIED` dan mencatat UID pemeriksa).
+
+---
+
+## 4. Spesifikasi Form & Alur Bisnis Utama
+
+### 4.1 Form Profil Motor Pembalap (Rider Vehicle Profile)
+Saat anggota menambahkan data motor balapnya ke sistem, form wajib mengumpulkan data berikut:
+1. **Merk Kendaraan:** Dropdown: `Honda`, `Yamaha`, `Suzuki`, `Kawasaki`, `Vespa`.
+2. **Nama Kendaraan:** Input teks nama model (contoh: `Vario 125`, `Sprint 150`, `Aerox 155`, `Mx King`, `CBR 150R`, `Ninja 150`).
+3. **Tipe Kendaraan:** Dropdown:
+   * `Matic` (Transmisi Otomatis/CVT)
+   * `Kopling` (Transmisi Manual Berkopling)
+4. **Ukuran Diameter Piston (mm):** Input numerik ukuran piston mesin (contoh: `59`, `60`, `62`, `63`, `66` mm).
+
+---
+
+### 4.2 Alur Pendaftaran, Pembayaran & Penerbitan Nomor Balap
+> **Siapa yang memverifikasi pembayaran?**  
+> **BENDAHARA (Dika)** adalah satu-satunya ofisial yang berwenang memvalidasi bukti transfer uang pendaftaran.
+
 ```mermaid
 sequenceDiagram
     autonumber
     actor Rider as Anggota (Ferdi)
     actor Ben as Bendahara (Dika)
+    actor Sek as Sekretaris/Scrut (Alfa)
     participant App as DragHub App
     participant DB as Cloud Firestore
 
-    Rider->>App: Pilih Event -> Pilih Kelas -> Upload Bukti Transfer
-    App->>DB: Simpan ke `event_registrations` (status: "PENDING")
-    Ben->>App: Buka Portal Panitia -> Tab Verifikasi Pembayaran
-    Ben->>App: Periksa Bukti Gambar -> Klik "Konfirmasi Valid"
-    App->>DB: Update status registrasi: "CONFIRMED"
-    App->>DB: Auto catat kas masuk di `kas_transactions`
-```
-
-### 4.3 Alur Input Telemetri & Leaderboard (Ofisial $\rightarrow$ Leaderboard Realtime)
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Ofisial as Wakil/Ofisial (Raihan)
-    actor Rider as Anggota/Publik
-    participant App as DragHub App
-    participant DB as Cloud Firestore
-
-    Ofisial->>App: Masuk Tab Telemetri -> Pilih Lane 01/02
-    Ofisial->>App: Input Nomor Start, Reaction Time, Elapsed Time
-    App->>DB: Simpan dokumen di `race_results`
-    DB-->>App: Firestore Snapshot Stream terpicu otomatis
-    Rider->>App: Layar Leaderboard langsung ter-update urut tercepat
+    Rider->>App: Pilih Event & Motor (misal: Piston 62mm)
+    Rider->>App: Pilih Kelas (misal: Matic 63) & Upload Bukti Transfer
+    App->>DB: Simpan pendaftaran (status: "PENDING", nomorBalap: null)
+    
+    Note over Rider,Ben: Nomor Balap BELUM MUNCUL sebelum diverifikasi
+    
+    Ben->>App: Buka Portal Panitia -> Tab Pembayaran/Kas
+    Ben->>App: Periksa foto bukti transfer di rekening komunitas
+    Ben->>App: Klik "Konfirmasi Lunas (PAID)"
+    App->>DB: Update status: "PAID", verifiedBy: uidBendahara
+    App->>DB: Generate Nomor Balap Resmi (misal: "#089")
+    
+    DB-->>Rider: Nomor Balap Resmi "#089" Tampil di Layar Pembalap
+    
+    Note over Rider,Sek: Scrutineering Fisik di Sirkuit Hari-H
+    Sek->>App: Ukur fisik piston & catat hasil ukur
+    alt Piston Sesuai (<= Batas)
+        Sek->>App: Klik Loloskan -> Status: "SCRUT_PASSED"
+    else Piston Melebihi Batas
+        Sek->>App: Verifikasi Dialog Konfirmasi Diskualifikasi -> Status: "DISQUALIFIED"
+        DB-->>Rider: Muncul Notifikasi Diskualifikasi beserta Alasan Teknis
+    end
 ```
 
 ---
 
-## 5. Rincian Kebutuhan Fungsional (Functional Requirements)
+## 5. Matriks Hak Akses (Role-Based Access Control / RBAC)
 
-### Modul 1: Autentikasi & Manajemen Akun
-* **FR-1.1 Pendaftaran Akun Paddock:** Pengguna baru dapat mendaftar melalui `RegisterScreen` dengan nama lengkap, email, nomor WhatsApp, nomor start idaman, dan kelas pembalap (`NOVICE`, `BRACKET 8`, `BRACKET 9`, dll.). Akun baru otomatis memiliki role `anggota`.
-* **FR-1.2 Multi-Role Login:** `LoginScreen` menyediakan autentikasi Firebase Auth dengan fitur *Role Detection*. Jika akun terdaftar memiliki role pengurus (`ketua`, `wakil`, `sekretaris`, `bendahara`), aplikasi mengarahkan ke `PanitiaHomeScreen`. Jika anggota biasa, diarahkan ke `HomeScreen`.
-* **FR-1.3 Sesi & Logout:** Logout terproteksi dialog konfirmasi pada avatar profil di `HomeScreen` dan tombol logout di `PanitiaHomeScreen`.
-
-### Modul 2: Modul Beranda & Registrasi Event Pembalap (Rider Portal)
-* **FR-2.1 Tampilan Beranda Dinamis:** Menampilkan status pembalap, kategori mesin, kalender agenda kejuaraan balap, dan tab event *Aktif* vs *Mendatang*.
-* **FR-2.2 Pendaftaran Balap:** Anggota dapat memilih kejuaraan berstatus `PUBLISHED`, memilih motor balap, dan melampirkan foto bukti pembayaran pendaftaran.
-
-### Modul 3: Modul Pengurus Terintegrasi (Official Portal)
-* **FR-3.1 Tab Pembayaran (Bendahara):** Menampilkan daftar pendaftar yang belum diverifikasi, modal dialog *preview* gambar bukti transfer, dan aksi setujui/tolak pembayaran.
-* **FR-3.2 Tab Telemetri (Ofisial / Wakil Ketua):** Formulir cepat untuk memasukkan hasil sensor garis finish balap (nomor start, lane, stage eliminasi, reaction time, elapsed time).
-* **FR-3.3 Tab Event & Regulasi (Sekretaris):** Formulir pembuatan kejuaraan baru, penetapan kuota peserta, lokasi sirkuit, dan biaya registrasi.
-
-### Modul 4: Papan Klasemen (Leaderboard Screen)
-* **FR-4.1 Realtime Ranking:** Menampilkan podium 3 besar (Gold, Silver, Bronze) dan tabel daftar pembalap dengan waktu tempuh tercepat (*Elapsed Time* terendah).
-* **FR-4.2 Filter Kategori:** Filter klasemen berdasarkan kelas motor balap (Bebek 4T 200cc, Sport 2T 150cc Frame STD, Bracket 8 Detik, Bracket 9 Detik).
+| Fitur / Modul | Anggota (Rider) | Sekretaris | Bendahara | Ketua & Wakil |
+| :--- | :--- | :---: | :---: | :---: |
+| **Input Profil Motor (Merk, Tipe, Piston)** | ✅ Create / Edit | ❌ | ❌ | ❌ |
+| **Daftar Event Balap & Upload Bukti** | ✅ Create | ❌ | ❌ | ❌ |
+| **Lihat Nomor Balap Resmi** | ✅ (Setelah Lunas) | ✅ Read | ✅ Read | ✅ Read |
+| **Verifikasi Bukti Transfer Pendaftaran** | ❌ | ❌ | ✅ **Full Approve** | ✅ Monitoring |
+| **Input Ukur Scrutineering & Loloskan** | ❌ | ✅ **Full Access**| ❌ | ✅ Full Access |
+| **Verifikasi & Eksekusi Diskualifikasi Peserta** | ❌ | ✅ **Petugas Scrut**| ❌ | ✅ Full Access |
+| **Buat / Edit Regulasi Event & Kelas** | ❌ | ✅ Create / Edit | ❌ | ✅ Full Access |
+| **Approval Event Resmi Tayang** | ❌ | ❌ | ❌ | ✅ **Full Approve** |
+| **Input Telemetri Waktu Balap** | ❌ | ✅ Ofisial Balap | ❌ | ✅ Full Access |
 
 ---
 
-## 6. Kebutuhan Non-Fungsional (Non-Functional Requirements)
-1. **Performa:** Render daftar list menggunakan `ListView.builder` dan `SingleChildScrollView` teroptimasi dengan memori stabil.
-2. **Keandalan Jaringan:** Penanganan *offline cache* Cloud Firestore agar data terakhir tetap dapat terbaca saat koneksi di area sirkuit tidak stabil.
-3. **Standar Kode:** Menggunakan Flutter 3.47+ dan Dart 3.13+, menerapkan pemisahan file modular (*Clean Architecture: Models, Services, Screens*).
-
+## 6. Kebutuhan Non-Fungsional
+1. **Pencegahan Human Error:** Aksi diskualifikasi wajib melewati validasi konfirmasi ganda (*Confirmation Barrier*) untuk meminimalkan salah pencet.
+2. **Auditabilitas Bukti Diskualifikasi:** Sistem menyimpan ID ofisial pemeriksa, waktu pemeriksaan, dan alasan detail dalam database Firestore.
+3. **Penyampaian Transparan ke Pembalap:** Status diskualifikasi langsung tercermin pada halaman utama pembalap dengan rincian pengukuran aktual agar terbebas dari kecurigaan kecurangan panitia.
