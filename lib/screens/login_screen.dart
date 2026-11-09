@@ -50,8 +50,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Mencoba masuk dengan Firebase Auth
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // Mencoba masuk dengan Firebase Auth sungguhan
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -61,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // Jeda 1 detik agar pesan sukses terbaca oleh pengguna
       await Future.delayed(const Duration(seconds: 1));
       
-      // Navigasi ke beranda jika login berhasil (Tanda // sudah dihapus)
+      // Navigasi ke beranda jika login berhasil
       if (mounted) {
         Navigator.pushReplacement(
           context, 
@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else if (e.code == 'user-disabled') {
         errorMessage = 'Akun ini telah dinonaktifkan oleh ofisial.';
       } else if (e.code == 'INVALID_LOGIN_CREDENTIALS') {
-         errorMessage = 'Email atau Kunci Telemetri tidak cocok.';
+        errorMessage = 'Email atau Kunci Telemetri tidak cocok.';
       }
 
       _showMessage(errorMessage, isError: true);

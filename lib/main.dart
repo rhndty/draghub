@@ -8,10 +8,14 @@ void main() async {
   // Wajib dipanggil sebelum Firebase.initializeApp
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inisialisasi Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform
-  );
+  // Inisialisasi Firebase (dengan try-catch agar aman saat bypass/offline)
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase init bypassed: $e');
+  }
 
   runApp(const DragRacingApp());
 }
