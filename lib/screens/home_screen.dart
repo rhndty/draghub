@@ -1,15 +1,15 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'leaderboard_screen.dart';
+import 'profile_screen.dart';
 
-import '../theme/app_colors.dart';
+// Import layar admin
 import 'admin/admin_event_screen.dart';
 import 'admin/admin_financial_screen.dart';
 import 'admin/admin_timing_screen.dart';
-import 'leaderboard_screen.dart';
-
-// import 'leaderboard_screen.dart'; // Aktifkan jika layar leaderboard sudah dipasang ke navigasi bawah
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,37 +61,46 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.background,
       body: _bottomNavIndex == 1
           ? const LeaderboardScreen()
-          : SafeArea(
-              child: Column(
-                children: [
-                  // Bagian Header Tetap (Tidak ikut terscroll agar selalu terlihat)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 0),
-                    child: Column(
-                      children: [
-                        _buildTopHeader(),
-                        const SizedBox(height: 20),
-                        _buildRiderStatusBadge(),
-                        const SizedBox(height: 16),
-                        _buildTabSelector(),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
-                  ),
-
-                  // Bagian Konten Dinamis yang bisa di-scroll
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                      child: _selectedTabIndex == 0
-                          ? _buildActiveView()
-                          : _buildUpcomingView(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          : _bottomNavIndex == 3
+          ? const ProfileScreen()
+          : _bottomNavIndex == 0 
+              ? _buildHomeContent() 
+              : const Center(child: Text('Halaman Garasi/Komunitas', style: TextStyle(color: Colors.grey))),
       bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  // ===========================================================================
+  // WIDGET HEADER & NAVIGASI UMUM
+  // ===========================================================================
+  
+  Widget _buildHomeContent() {
+    return SafeArea(
+      child: Column(
+        children: [
+          // Bagian Header Tetap (Tidak ikut terscroll)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 0),
+            child: Column(
+              children: [
+                _buildTopHeader(),
+                const SizedBox(height: 20),
+                _buildRiderStatusBadge(),
+                const SizedBox(height: 16),
+                _buildTabSelector(),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+          // Bagian Konten Dinamis yang bisa di-scroll
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: _selectedTabIndex == 0 ? _buildActiveView() : _buildUpcomingView(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -109,11 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        const CircleAvatar(
-          radius: 18,
-          backgroundColor: AppColors.primaryMaroon,
-          child: Icon(Icons.person, color: Colors.white, size: 20),
-        ),
+        const CircleAvatar(radius: 18, backgroundColor: AppColors.primaryMaroon, child: Icon(Icons.person, color: Colors.white, size: 20)),
       ],
     );
   }
@@ -167,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
+          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
         ),
         child: Center(
           child: Text(title, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, letterSpacing: 1.0, color: isSelected ? AppColors.textDark : AppColors.textMuted)),
@@ -249,13 +254,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildPriorityBanner() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFFFDF2F2), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primaryMaroon.withValues(alpha: 0.1))),
+      decoration: BoxDecoration(color: const Color(0xFFFDF2F2), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primaryMaroon.withOpacity(0.1))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: AppColors.primaryMaroon.withValues(alpha: 0.2))),
+            decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: AppColors.primaryMaroon.withOpacity(0.2))),
             child: const Icon(Icons.verified, color: AppColors.primaryMaroon, size: 16),
           ),
           const SizedBox(width: 12),
@@ -269,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Text('SLOT PRIORITAS TERBUKA', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMaroon, letterSpacing: 0.5)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: AppColors.primaryMaroon.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                      decoration: BoxDecoration(color: AppColors.primaryMaroon.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
                       child: const Text('#402', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryMaroon)),
                     ),
                   ],
@@ -332,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderLight),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -352,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 180,
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)]),
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.8)]),
                 ),
               ),
               Positioned(
@@ -373,7 +378,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 top: 12, right: 12,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(4)),
+                  decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(4)),
                   child: Text('${data['distanceMeter'] ?? 201}M STRIP', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                 ),
               ),
@@ -388,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.9), borderRadius: BorderRadius.circular(8)),
                       child: const Icon(Icons.bookmark_border, color: AppColors.textDark, size: 20),
                     ),
                   ],
@@ -535,7 +540,7 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderLight),
-        boxShadow: [BoxShadow(color: AppColors.primaryMaroon.withValues(alpha: 0.15), blurRadius: 16, offset: const Offset(0, 8))],
+        boxShadow: [BoxShadow(color: AppColors.primaryMaroon.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 8))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -555,7 +560,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 220,
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withValues(alpha: 0.9)]),
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.9)]),
                 ),
               ),
               Positioned(
@@ -638,7 +643,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Column(
           children: [
-            Container(width: 14, height: 14, decoration: BoxDecoration(color: isActive ? AppColors.primaryMaroon : (isDone ? Colors.green : AppColors.borderLight), shape: BoxShape.circle, border: isActive ? Border.all(color: AppColors.primaryMaroon.withValues(alpha: 0.3), width: 4) : null)),
+            Container(width: 14, height: 14, decoration: BoxDecoration(color: isActive ? AppColors.primaryMaroon : (isDone ? Colors.green : AppColors.borderLight), shape: BoxShape.circle, border: isActive ? Border.all(color: AppColors.primaryMaroon.withOpacity(0.3), width: 4) : null)),
             Container(width: 2, height: 44, color: AppColors.borderLight),
           ],
         ),
@@ -673,7 +678,10 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildBottomNavItem(0, Icons.home_outlined),
           _buildBottomNavItem(1, Icons.leaderboard_outlined),
-          _buildBottomNavItem(2, Icons.sports_motorsports_outlined),
+          
+          if (_isAdmin)
+            _buildBottomNavItem(2, Icons.admin_panel_settings_outlined),
+            
           _buildBottomNavItem(3, Icons.person_outline),
         ],
       ),
@@ -716,7 +724,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.3), 
+      barrierColor: Colors.black.withOpacity(0.3), 
       builder: (context) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -774,7 +782,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAdminMenuIcon({required IconData icon, required String label, required bool isActive, required VoidCallback onTap}) {
-    final Color color = isActive ? AppColors.primaryMaroon : AppColors.textMuted.withValues(alpha: 0.3);
+    final Color color = isActive ? AppColors.primaryMaroon : AppColors.textMuted.withOpacity(0.3);
     
     return GestureDetector(
       onTap: onTap, 

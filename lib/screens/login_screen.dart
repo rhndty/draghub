@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
-import 'panitia_home_screen.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -100,17 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
       
       await Future.delayed(const Duration(milliseconds: 600));
       
-      if (mounted) {
-        Navigator.pushReplacement(
-          context, 
-          MaterialPageRoute(
-            builder: (context) => isPanitia 
-                ? const PanitiaHomeScreen() 
-                : const HomeScreen(),
-          ),
-        );
-      }
-      
+    
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Terjadi kesalahan autentikasi.';
       
