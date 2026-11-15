@@ -55,7 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // 3. Simpan Profil ke Firestore koleksi 'users'
+      // 3. Simpan Profil ke Firestore koleksi 'users' sesuai ERD DragHub
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
@@ -64,9 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'fullName': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'phoneNumber': _phoneController.text.trim(),
-        'startNumber': '', // Akan diisi saat pendaftaran kelas
-        'riderClass': 'NOVICE', // Default
-        'role': 'PESERTA',
+        'role': 'anggota', // BERUBAH: Default pengguna baru wajib 'anggota' sesuai ERD
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -122,7 +120,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _buildInputLabel('NAMA LENGKAP'),
               _buildTextField(
                 controller: _nameController,
-                hintText: 'cth. Bayu Pratama',
+                hintText: 'cth. Jhon Theo',
                 icon: Icons.badge_outlined,
                 keyboardType: TextInputType.name,
               ),
@@ -132,7 +130,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _buildInputLabel('IDENTITAS AKSES (EMAIL)'),
               _buildTextField(
                 controller: _emailController,
-                hintText: 'rider@apexdrag.com',
+                hintText: 'xxxxxxxx@gmail.com',
                 icon: Icons.mail_outline,
                 keyboardType: TextInputType.emailAddress,
               ),
