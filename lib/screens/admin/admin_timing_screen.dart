@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import '../admin/admin_financial_screen.dart';
 
 class AdminTimingScreen extends StatefulWidget {
   const AdminTimingScreen({super.key});
@@ -10,6 +11,8 @@ class AdminTimingScreen extends StatefulWidget {
 }
 
 class _AdminTimingScreenState extends State<AdminTimingScreen> {
+  int _adminNavIndex = 2; // 2 = Timing
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
