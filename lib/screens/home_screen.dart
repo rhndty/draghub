@@ -1,8 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'leaderboard_screen.dart';
 import 'profile_screen.dart';
 
@@ -30,15 +34,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Daftar role yang berhak melihat menu Admin
   bool get _isAdmin => [
-        'SUPER_ADMIN',
-        'RACE_DIRECTOR',
-        'VERIFIKATOR',
-        'RACE_CONTROL',
-        'ketua',
-        'wakil',
-        'sekretaris',
-        'bendahara',
-      ].contains(_userRole);
+    'SUPER_ADMIN',
+    'RACE_DIRECTOR',
+    'VERIFIKATOR',
+    'RACE_CONTROL',
+    'ketua',
+    'wakil',
+    'sekretaris',
+    'bendahara',
+  ].contains(_userRole);
 
   @override
   void initState() {
@@ -50,13 +54,17 @@ class _HomeScreenState extends State<HomeScreen> {
   void _listenToUserRole() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
-      _userSubscription = FirebaseFirestore.instance.collection('users').doc(uid).snapshots().listen((doc) {
-        if (doc.exists && mounted) {
-          setState(() {
-            _userRole = doc.data()?['role'] ?? 'anggota';
+      _userSubscription = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .snapshots()
+          .listen((doc) {
+            if (doc.exists && mounted) {
+              setState(() {
+                _userRole = doc.data()?['role'] ?? 'anggota';
+              });
+            }
           });
-        }
-      });
     }
   }
 
@@ -74,9 +82,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ? const LeaderboardScreen()
           : _bottomNavIndex == 3
           ? const ProfileScreen()
-          : _bottomNavIndex == 0 
-              ? _buildHomeContent() 
-              : const Center(child: Text('Halaman Garasi/Komunitas', style: TextStyle(color: Colors.grey))),
+          : _bottomNavIndex == 0
+          ? _buildHomeContent()
+          : const Center(
+              child: Text(
+                'Halaman Garasi/Komunitas',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
@@ -84,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ===========================================================================
   // WIDGET HEADER & NAVIGASI UMUM
   // ===========================================================================
-  
+
   Widget _buildHomeContent() {
     return SafeArea(
       child: Column(
@@ -107,7 +120,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: _selectedTabIndex == 0 ? _buildActiveView() : _buildUpcomingView(),
+              child: _selectedTabIndex == 0
+                  ? _buildActiveView()
+                  : _buildUpcomingView(),
             ),
           ),
         ],
@@ -125,11 +140,20 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 8),
             Text(
               _selectedTabIndex == 0 ? 'Home' : 'Home',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textDark, letterSpacing: 0.5),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textDark,
+                letterSpacing: 0.5,
+              ),
             ),
           ],
         ),
-        const CircleAvatar(radius: 18, backgroundColor: AppColors.primaryMaroon, child: Icon(Icons.person, color: Colors.white, size: 20)),
+        const CircleAvatar(
+          radius: 18,
+          backgroundColor: AppColors.primaryMaroon,
+          child: Icon(Icons.person, color: Colors.white, size: 20),
+        ),
       ],
     );
   }
@@ -137,24 +161,75 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildRiderStatusBadge() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(color: AppColors.segmentBackground, borderRadius: BorderRadius.circular(24)),
+      decoration: BoxDecoration(
+        color: AppColors.segmentBackground,
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('#402', style: TextStyle(color: AppColors.primaryMaroon, fontWeight: FontWeight.bold, fontSize: 13)),
+          const Text(
+            '#402',
+            style: TextStyle(
+              color: AppColors.primaryMaroon,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
           const SizedBox(width: 4),
           const Icon(Icons.verified, color: AppColors.primaryMaroon, size: 14),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 12.0),
-            child: Text('RIDER CLASS A', style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+            child: Text(
+              'RIDER CLASS A',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.0,
+              ),
+            ),
           ),
-          Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppColors.textMuted, shape: BoxShape.circle)),
+          Container(
+            width: 4,
+            height: 4,
+            decoration: const BoxDecoration(
+              color: AppColors.textMuted,
+              shape: BoxShape.circle,
+            ),
+          ),
           const SizedBox(width: 12),
-          Container(width: 6, height: 6, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+            ),
+          ),
           const SizedBox(width: 6),
-          const Text('PADDOCK LIVE', style: TextStyle(color: AppColors.textDark, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+          const Text(
+            'PADDOCK LIVE',
+            style: TextStyle(
+              color: AppColors.textDark,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.0,
+            ),
+          ),
           const Spacer(),
-          Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.notifications_outlined, size: 16, color: AppColors.textDark)),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.notifications_outlined,
+              size: 16,
+              color: AppColors.textDark,
+            ),
+          ),
         ],
       ),
     );
@@ -164,7 +239,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       height: 44,
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: AppColors.segmentBackground, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: AppColors.segmentBackground,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         children: [
           Expanded(child: _buildTabButton(0, 'AKTIF (1)')),
@@ -183,10 +261,26 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
         ),
         child: Center(
-          child: Text(title, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.w600, letterSpacing: 1.0, color: isSelected ? AppColors.textDark : AppColors.textMuted)),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+              letterSpacing: 1.0,
+              color: isSelected ? AppColors.textDark : AppColors.textMuted,
+            ),
+          ),
         ),
       ),
     );
@@ -209,25 +303,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // MENGAMBIL DATA DARI FIRESTORE SECARA REAL-TIME
         StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('events').where('status', isEqualTo: 'UPCOMING').snapshots(),
+          stream: FirebaseFirestore.instance
+              .collection('events')
+              .where('status', isEqualTo: 'UPCOMING')
+              .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: Padding(padding: EdgeInsets.all(32.0), child: CircularProgressIndicator(color: AppColors.primaryMaroon)));
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(
+                    color: AppColors.primaryMaroon,
+                  ),
+                ),
+              );
             }
 
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
               return Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.borderLight)),
-                child: const Text('Belum ada jadwal kejuaraan mendatang.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: const Text(
+                  'Belum ada jadwal kejuaraan mendatang.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               );
             }
 
             return Column(
               children: snapshot.data!.docs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
-                final eventId = doc.id; 
+                final eventId = doc.id;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),
                   child: _buildUpcomingEventCard(data, eventId),
@@ -253,8 +368,24 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(color: isSelected ? AppColors.primaryMaroon : Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: isSelected ? AppColors.primaryMaroon : AppColors.borderLight)),
-              child: Text(months[index], style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: isSelected ? Colors.white : AppColors.textMuted)),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primaryMaroon : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.primaryMaroon
+                      : AppColors.borderLight,
+                ),
+              ),
+              child: Text(
+                months[index],
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                  color: isSelected ? Colors.white : AppColors.textMuted,
+                ),
+              ),
             ),
           );
         }),
@@ -265,14 +396,28 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildPriorityBanner() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFFFDF2F2), borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primaryMaroon.withOpacity(0.1))),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDF2F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primaryMaroon.withOpacity(0.1)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, border: Border.all(color: AppColors.primaryMaroon.withOpacity(0.2))),
-            child: const Icon(Icons.verified, color: AppColors.primaryMaroon, size: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.primaryMaroon.withOpacity(0.2),
+              ),
+            ),
+            child: const Icon(
+              Icons.verified,
+              color: AppColors.primaryMaroon,
+              size: 16,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -282,22 +427,52 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('SLOT PRIORITAS TERBUKA', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primaryMaroon, letterSpacing: 0.5)),
+                    const Text(
+                      'SLOT PRIORITAS TERBUKA',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryMaroon,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: AppColors.primaryMaroon.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                      child: const Text('#402', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryMaroon)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryMaroon.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        '#402',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryMaroon,
+                        ),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 RichText(
                   text: const TextSpan(
-                    style: TextStyle(fontSize: 11, color: AppColors.textDark, height: 1.4),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textDark,
+                      height: 1.4,
+                    ),
                     children: [
                       TextSpan(text: 'Notifikasi siap untuk kelas '),
-                      TextSpan(text: 'Bebek 4T TU 200cc', style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextSpan(text: '. Pra-registrasi resmi dimulai pekan ini.'),
+                      TextSpan(
+                        text: 'Bebek 4T TU 200cc',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(
+                        text: '. Pra-registrasi resmi dimulai pekan ini.',
+                      ),
                     ],
                   ),
                 ),
@@ -317,13 +492,32 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Icon(Icons.stars, color: AppColors.primaryMaroon, size: 18),
             const SizedBox(width: 6),
-            Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark, letterSpacing: 0.5)),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+                letterSpacing: 0.5,
+              ),
+            ),
           ],
         ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(color: const Color(0xFFFDF2F2), borderRadius: BorderRadius.circular(4)),
-          child: Text(badgeText, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: AppColors.primaryMaroon, letterSpacing: 1.0)),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFDF2F2),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            badgeText,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: AppColors.primaryMaroon,
+              letterSpacing: 1.0,
+            ),
+          ),
         ),
       ],
     );
@@ -335,7 +529,20 @@ class _HomeScreenState extends State<HomeScreen> {
     if (data['eventDate'] != null) {
       DateTime date = (data['eventDate'] as Timestamp).toDate();
       day = date.day.toString();
-      List<String> months = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+      List<String> months = [
+        'JAN',
+        'FEB',
+        'MAR',
+        'APR',
+        'MEI',
+        'JUN',
+        'JUL',
+        'AGU',
+        'SEP',
+        'OKT',
+        'NOV',
+        'DES',
+      ];
       monthStr = months[date.month - 1];
     }
 
@@ -348,7 +555,13 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderLight),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -356,7 +569,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
                 child: Image.network(
                   data['bannerUrl'] ?? 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=600&auto=format&fit=crop',
                   height: 180,
@@ -367,45 +582,100 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 height: 180,
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.8)]),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                  ),
                 ),
               ),
               Positioned(
-                top: 12, left: 12,
+                top: 12,
+                left: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   child: Row(
                     children: const [
-                      Icon(Icons.circle, color: AppColors.primaryMaroon, size: 8),
+                      Icon(
+                        Icons.circle,
+                        color: AppColors.primaryMaroon,
+                        size: 8,
+                      ),
                       SizedBox(width: 4),
-                      Text('PENDAFTARAN BUKA', style: TextStyle(color: AppColors.primaryMaroon, fontSize: 10, fontWeight: FontWeight.bold)),
+                      Text(
+                        'PENDAFTARAN BUKA',
+                        style: TextStyle(
+                          color: AppColors.primaryMaroon,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
               Positioned(
-                top: 12, right: 12,
+                top: 12,
+                right: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(4)),
-                  child: Text('${data['distanceMeter'] ?? 201}M STRIP', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${data['distanceMeter'] ?? 201}M STRIP',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
                 ),
               ),
               Positioned(
-                bottom: 16, left: 16, right: 16,
+                bottom: 16,
+                left: 16,
+                right: 16,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Expanded(
-                      child: Text(data['title'] ?? 'Kejuaraan Drag Bike', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+                      child: Text(
+                        data['title'] ?? 'Kejuaraan Drag Bike',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                     Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.9), borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.bookmark_border, color: AppColors.textDark, size: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.bookmark_border,
+                        color: AppColors.textDark,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
@@ -418,9 +688,22 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildUpcomingStat(Icons.calendar_month, '$day $monthStr', 'TANGGAL'),
-                _buildUpcomingStat(Icons.emoji_events_outlined, 'Rp 85 JT', 'HADIAH', valueColor: AppColors.primaryMaroon),
-                _buildUpcomingStat(Icons.group_outlined, '$remainingSlots SLOT', 'SISA KUOTA'),
+                _buildUpcomingStat(
+                  Icons.calendar_month,
+                  '$day $monthStr',
+                  'TANGGAL',
+                ),
+                _buildUpcomingStat(
+                  Icons.emoji_events_outlined,
+                  'Rp 85 JT',
+                  'HADIAH',
+                  valueColor: AppColors.primaryMaroon,
+                ),
+                _buildUpcomingStat(
+                  Icons.group_outlined,
+                  '$remainingSlots SLOT',
+                  'SISA KUOTA',
+                ),
               ],
             ),
           ),
@@ -430,14 +713,33 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                const Text('KELAS: ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.0)),
+                const Text(
+                  'KELAS: ',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textMuted,
+                    letterSpacing: 1.0,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: FutureBuilder<QuerySnapshot>(
-                    future: FirebaseFirestore.instance.collection('events').doc(eventId).collection('classes').get(),
+                    future: FirebaseFirestore.instance
+                        .collection('events')
+                        .doc(eventId)
+                        .collection('classes')
+                        .get(),
                     builder: (context, classSnapshot) {
-                      if (!classSnapshot.hasData || classSnapshot.data!.docs.isEmpty) {
-                        return const Text('Memuat kelas...', style: TextStyle(fontSize: 10, color: AppColors.textMuted));
+                      if (!classSnapshot.hasData ||
+                          classSnapshot.data!.docs.isEmpty) {
+                        return const Text(
+                          'Memuat kelas...',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
+                          ),
+                        );
                       }
                       return SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
@@ -445,7 +747,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: classSnapshot.data!.docs.map((clsDoc) {
                             return Padding(
                               padding: const EdgeInsets.only(right: 8.0),
-                              child: _buildClassChip(clsDoc['className'] ?? 'Kelas Bebas'),
+                              child: _buildClassChip(
+                                clsDoc['className'] ?? 'Kelas Bebas',
+                              ),
                             );
                           }).toList(),
                         ),
@@ -464,9 +768,27 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 48,
               child: ElevatedButton.icon(
                 onPressed: () {},
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.segmentBackground, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), elevation: 0),
-                icon: const Icon(Icons.menu_book, size: 16, color: AppColors.textDark),
-                label: const Text('REGULASI', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: AppColors.textDark)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.segmentBackground,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+                icon: const Icon(
+                  Icons.menu_book,
+                  size: 16,
+                  color: AppColors.textDark,
+                ),
+                label: const Text(
+                  'REGULASI',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.0,
+                    color: AppColors.textDark,
+                  ),
+                ),
               ),
             ),
           ),
@@ -475,14 +797,34 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildUpcomingStat(IconData icon, String value, String label, {Color valueColor = AppColors.textDark}) {
+  Widget _buildUpcomingStat(
+    IconData icon,
+    String value,
+    String label, {
+    Color valueColor = AppColors.textDark,
+  }) {
     return Column(
       children: [
         Icon(icon, color: AppColors.primaryMaroon, size: 20),
         const SizedBox(height: 6),
-        Text(value, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: valueColor)),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 14,
+            color: valueColor,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.0)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textMuted,
+            letterSpacing: 1.0,
+          ),
+        ),
       ],
     );
   }
@@ -490,8 +832,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildClassChip(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: AppColors.segmentBackground, borderRadius: BorderRadius.circular(16)),
-      child: Text(text, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+      decoration: BoxDecoration(
+        color: AppColors.segmentBackground,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textDark,
+        ),
+      ),
     );
   }
 
@@ -504,24 +856,56 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('events').where('status', isEqualTo: 'STAGE_READY').snapshots(),
+          stream: FirebaseFirestore.instance
+              .collection('events')
+              .where('status', isEqualTo: 'STAGE_READY')
+              .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: Padding(padding: EdgeInsets.all(32.0), child: CircularProgressIndicator(color: AppColors.primaryMaroon)));
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(
+                    color: AppColors.primaryMaroon,
+                  ),
+                ),
+              );
             }
 
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
               return Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.borderLight)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
                 child: const Column(
                   children: [
-                    Icon(Icons.sports_score, size: 48, color: AppColors.textMuted),
+                    Icon(
+                      Icons.sports_score,
+                      size: 48,
+                      color: AppColors.textMuted,
+                    ),
                     SizedBox(height: 16),
-                    Text('Paddock Sedang Kosong', style: TextStyle(color: AppColors.textDark, fontSize: 16, fontWeight: FontWeight.w900)),
+                    Text(
+                      'Paddock Sedang Kosong',
+                      style: TextStyle(
+                        color: AppColors.textDark,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     SizedBox(height: 8),
-                    Text('Tidak ada kejuaraan yang berlangsung hari ini. Cek tab Mendatang untuk jadwal berikutnya.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    Text(
+                      'Tidak ada kejuaraan yang berlangsung hari ini. Cek tab Mendatang untuk jadwal berikutnya.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -551,7 +935,13 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderLight),
-        boxShadow: [BoxShadow(color: AppColors.primaryMaroon.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 8))],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryMaroon.withOpacity(0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -559,7 +949,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
                 child: Image.network(
                   data['bannerUrl'] ?? 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=600&auto=format&fit=crop',
                   height: 220,
@@ -570,36 +962,79 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 height: 220,
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.9)]),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
+                  ),
                 ),
               ),
               Positioned(
-                top: 16, left: 16,
+                top: 16,
+                left: 16,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: Colors.red.shade700, borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade700,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   child: Row(
                     children: const [
                       Icon(Icons.sensors, color: Colors.white, size: 14),
                       SizedBox(width: 6),
-                      Text('RACE LIVE', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                      Text(
+                        'RACE LIVE',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
               Positioned(
-                bottom: 20, left: 16, right: 16,
+                bottom: 20,
+                left: 16,
+                right: 16,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(data['title'] ?? 'Kejuaraan Drag Bike', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, height: 1.2)),
+                    Text(
+                      data['title'] ?? 'Kejuaraan Drag Bike',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        height: 1.2,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.location_on, color: AppColors.primaryMaroon, size: 16),
+                        const Icon(
+                          Icons.location_on,
+                          color: AppColors.primaryMaroon,
+                          size: 16,
+                        ),
                         const SizedBox(width: 4),
-                        Text('${data['location'] ?? 'Sirkuit'} • ${data['distanceMeter'] ?? 201}M', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                        Text(
+                          '${data['location'] ?? 'Sirkuit'} • ${data['distanceMeter'] ?? 201}M',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -616,9 +1051,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () {
                   setState(() => _bottomNavIndex = 1);
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryMaroon, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryMaroon,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
                 icon: const Icon(Icons.timer, size: 20, color: Colors.white),
-                label: const Text('Leaderboard', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: Colors.white)),
+                label: const Text(
+                  'Leaderboard',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.0,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ),
@@ -633,9 +1082,21 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Row(
           children: const [
-            Icon(Icons.view_timeline_outlined, color: AppColors.primaryMaroon, size: 18),
+            Icon(
+              Icons.view_timeline_outlined,
+              color: AppColors.primaryMaroon,
+              size: 18,
+            ),
             SizedBox(width: 8),
-            Text('AGENDA HARI INI', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textDark, letterSpacing: 1.0)),
+            Text(
+              'AGENDA HARI INI',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+                letterSpacing: 1.0,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -648,13 +1109,33 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAgendaItem(String time, String title, {bool isDone = false, bool isActive = false}) {
+  Widget _buildAgendaItem(
+    String time,
+    String title, {
+    bool isDone = false,
+    bool isActive = false,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Column(
           children: [
-            Container(width: 14, height: 14, decoration: BoxDecoration(color: isActive ? AppColors.primaryMaroon : (isDone ? Colors.green : AppColors.borderLight), shape: BoxShape.circle, border: isActive ? Border.all(color: AppColors.primaryMaroon.withOpacity(0.3), width: 4) : null)),
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: isActive
+                    ? AppColors.primaryMaroon
+                    : (isDone ? Colors.green : AppColors.borderLight),
+                shape: BoxShape.circle,
+                border: isActive
+                    ? Border.all(
+                        color: AppColors.primaryMaroon.withOpacity(0.3),
+                        width: 4,
+                      )
+                    : null,
+              ),
+            ),
             Container(width: 2, height: 44, color: AppColors.borderLight),
           ],
         ),
@@ -663,9 +1144,27 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(time, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isActive ? AppColors.primaryMaroon : AppColors.textMuted)),
+              Text(
+                time,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isActive
+                      ? AppColors.primaryMaroon
+                      : AppColors.textMuted,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(title, style: TextStyle(fontSize: 15, fontWeight: isActive ? FontWeight.w900 : FontWeight.bold, color: isActive ? AppColors.textDark : (isDone ? AppColors.textMuted : AppColors.textDark))),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: isActive ? FontWeight.w900 : FontWeight.bold,
+                  color: isActive
+                      ? AppColors.textDark
+                      : (isDone ? AppColors.textMuted : AppColors.textDark),
+                ),
+              ),
             ],
           ),
         ),
@@ -689,10 +1188,10 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildBottomNavItem(0, Icons.home_outlined),
           _buildBottomNavItem(1, Icons.leaderboard_outlined),
-          
+
           if (_isAdmin)
             _buildBottomNavItem(2, Icons.admin_panel_settings_outlined),
-            
+
           _buildBottomNavItem(3, Icons.person_outline),
         ],
       ),
@@ -711,14 +1210,27 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        color: Colors.transparent, 
+        color: Colors.transparent,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected && index != 2 ? AppColors.primaryMaroon : AppColors.textMuted, size: 26),
+            Icon(
+              icon,
+              color: isSelected && index != 2
+                  ? AppColors.primaryMaroon
+                  : AppColors.textMuted,
+              size: 26,
+            ),
             const SizedBox(height: 4),
             if (isSelected && index != 2)
-              Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppColors.primaryMaroon, shape: BoxShape.circle))
+              Container(
+                width: 4,
+                height: 4,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryMaroon,
+                  shape: BoxShape.circle,
+                ),
+              )
             else
               const SizedBox(height: 4),
           ],
@@ -735,7 +1247,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.3), 
+      barrierColor: Colors.black.withOpacity(0.3),
       builder: (context) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -746,60 +1258,128 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               const SizedBox(height: 32),
-              
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildAdminMenuIcon(
-                    icon: Icons.view_sidebar_outlined, 
-                    label: 'EVENT', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'RACE_DIRECTOR' || _userRole == 'ketua' || _userRole == 'wakil' || _userRole == 'sekretaris', 
+                    icon: Icons.view_sidebar_outlined,
+                    label: 'EVENT',
+                    isActive:
+                        _userRole == 'SUPER_ADMIN' ||
+                        _userRole == 'RACE_DIRECTOR' ||
+                        _userRole == 'ketua' ||
+                        _userRole == 'wakil' ||
+                        _userRole == 'sekretaris',
                     onTap: () {
-                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'RACE_DIRECTOR' || _userRole == 'ketua' || _userRole == 'wakil' || _userRole == 'sekretaris')) return; 
+                      if (!(_userRole == 'SUPER_ADMIN' ||
+                          _userRole == 'RACE_DIRECTOR' ||
+                          _userRole == 'ketua' ||
+                          _userRole == 'wakil' ||
+                          _userRole == 'sekretaris'))
+                        return;
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminEventScreen()));
-                    }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminEventScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _buildAdminMenuIcon(
-                    icon: Icons.gavel_outlined, 
-                    label: 'PERSETUJUAN', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'ketua' || _userRole == 'wakil', 
+                    icon: Icons.gavel_outlined,
+                    label: 'PERSETUJUAN',
+                    isActive:
+                        _userRole == 'SUPER_ADMIN' ||
+                        _userRole == 'ketua' ||
+                        _userRole == 'wakil',
                     onTap: () {
-                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'ketua' || _userRole == 'wakil')) return; 
+                      if (!(_userRole == 'SUPER_ADMIN' ||
+                          _userRole == 'ketua' ||
+                          _userRole == 'wakil'))
+                        return;
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const TabPersetujuanView()));
-                    }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TabPersetujuanView(),
+                        ),
+                      );
+                    },
                   ),
                   _buildAdminMenuIcon(
-                    icon: Icons.request_quote_outlined, 
-                    label: 'FINANSIAL', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR' || _userRole == 'bendahara' || _userRole == 'ketua', 
+                    icon: Icons.request_quote_outlined,
+                    label: 'FINANSIAL',
+                    isActive:
+                        _userRole == 'SUPER_ADMIN' ||
+                        _userRole == 'VERIFIKATOR' ||
+                        _userRole == 'bendahara' ||
+                        _userRole == 'ketua',
                     onTap: () {
-                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR' || _userRole == 'bendahara' || _userRole == 'ketua')) return; 
+                      if (!(_userRole == 'SUPER_ADMIN' ||
+                          _userRole == 'VERIFIKATOR' ||
+                          _userRole == 'bendahara' ||
+                          _userRole == 'ketua'))
+                        return;
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminFinancialScreen()));
-                    }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminFinancialScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _buildAdminMenuIcon(
-                    icon: Icons.timer_outlined, 
-                    label: 'TIMING', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'RACE_CONTROL' || _userRole == 'wakil' || _userRole == 'ketua', 
+                    icon: Icons.timer_outlined,
+                    label: 'TIMING',
+                    isActive:
+                        _userRole == 'SUPER_ADMIN' ||
+                        _userRole == 'RACE_CONTROL' ||
+                        _userRole == 'wakil' ||
+                        _userRole == 'ketua',
                     onTap: () {
-                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'RACE_CONTROL' || _userRole == 'wakil' || _userRole == 'ketua')) return; 
+                      if (!(_userRole == 'SUPER_ADMIN' ||
+                          _userRole == 'RACE_CONTROL' ||
+                          _userRole == 'wakil' ||
+                          _userRole == 'ketua'))
+                        return;
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminTimingScreen()));
-                    }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminTimingScreen(),
+                        ),
+                      );
+                    },
                   ),
                   _buildAdminMenuIcon(
-                    icon: Icons.assignment_turned_in_outlined, 
-                    label: 'SEKRETARIS', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'sekretaris' || _userRole == 'ketua' || _userRole == 'wakil', 
+                    icon: Icons.assignment_turned_in_outlined,
+                    label: 'SEKRETARIS',
+                    isActive:
+                        _userRole == 'SUPER_ADMIN' ||
+                        _userRole == 'sekretaris' ||
+                        _userRole == 'ketua' ||
+                        _userRole == 'wakil',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const SekretarisPortalScreen()));
-                    }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SekretarisPortalScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -811,11 +1391,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAdminMenuIcon({required IconData icon, required String label, required bool isActive, required VoidCallback onTap}) {
-    final Color color = isActive ? AppColors.primaryMaroon : AppColors.textMuted.withOpacity(0.3);
-    
+  Widget _buildAdminMenuIcon({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    final Color color = isActive
+        ? AppColors.primaryMaroon
+        : AppColors.textMuted.withOpacity(0.3);
+
     return GestureDetector(
-      onTap: onTap, 
+      onTap: onTap,
       child: Column(
         children: [
           Icon(icon, size: 32, color: color),
@@ -831,10 +1418,17 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           if (isActive) ...[
             const SizedBox(height: 4),
-            Container(width: 4, height: 4, decoration: BoxDecoration(color: AppColors.primaryMaroon, shape: BoxShape.circle))
+            Container(
+              width: 4,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.primaryMaroon,
+                shape: BoxShape.circle,
+              ),
+            ),
           ] else ...[
             const SizedBox(height: 8),
-          ]
+          ],
         ],
       ),
     );
