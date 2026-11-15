@@ -26,6 +26,8 @@ Kerjakan satu PR fondasi terlebih dahulu; jangan mulai fitur yang bergantung pad
 2. **Rafli mengelola perubahan dependensi bersama** di `pubspec.yaml`/`pubspec.lock`. Anggota mengajukan kebutuhan paket di PR atau koordinasi sebelum mengubah manifest, supaya perubahan lockfile tidak saling menimpa.
 3. Setelah fondasi di-merge, tiap anggota membuat branch fitur sendiri dari `main`. Perubahan skema bersama tetap lewat PR dan persetujuan Rafli.
 4. Jangan menyalin implementasi lama apa adanya: beberapa layar masih memakai status/field yang berbeda dari ERD v1.3.1. Migrasikan sesuai kontrak v1.3.1 saat memecah layar.
+5. `firestore.rules` awal adalah baseline terbatas, bukan rules final untuk seluruh fitur. Lengkapi dan uji aturan koleksi tiap fitur di PR pemiliknya sebelum menghubungkan rules ke konfigurasi Firebase atau deploy.
+6. `CloudinaryService` memerlukan `cloudName` dan unsigned `uploadPreset` saat dibuat. Nilai ini bukan API secret; jangan pernah menaruh API secret di aplikasi.
 
 **Pemecahan layar yang disiapkan sebelum fitur paralel:**
 

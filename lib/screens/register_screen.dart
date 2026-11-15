@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart'; // Pastikan path ini sesuai dengan project Anda
+import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -48,27 +48,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 2. Buat Akun di Firebase Auth
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      await AuthService().registerMember(
+        fullName: _nameController.text,
+        email: _emailController.text,
+        phoneNumber: _phoneController.text,
+        password: _passwordController.text,
       );
-
-      // 3. Simpan Profil ke Firestore koleksi 'users'
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
-        'uid': userCredential.user!.uid,
-        'fullName': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phoneNumber': _phoneController.text.trim(),
-        'startNumber': '', // Akan diisi saat pendaftaran kelas
-        'riderClass': 'NOVICE', // Default
-        'role': 'PESERTA',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
 
       // 4. Sukses, pindah layar
       if (mounted) {

@@ -6,9 +6,12 @@ import 'login_screen.dart';
 import 'panitia/tab_kas_view.dart';
 import 'panitia/tab_telemetri_view.dart';
 import 'panitia/tab_event_view.dart';
+import 'panitia/tab_persetujuan_view.dart';
 
 class PanitiaHomeScreen extends StatefulWidget {
-  const PanitiaHomeScreen({super.key});
+  const PanitiaHomeScreen({super.key, this.role = 'anggota'});
+
+  final String role;
 
   @override
   State<PanitiaHomeScreen> createState() => _PanitiaHomeScreenState();
@@ -16,7 +19,12 @@ class PanitiaHomeScreen extends StatefulWidget {
 
 class _PanitiaHomeScreenState extends State<PanitiaHomeScreen> {
   int _selectedTabIndex = 0; // 0: Pembayaran/Kas, 1: Telemetri, 2: Event
-  int _bottomNavIndex = 0; // 3: Leaderboard
+  int _bottomNavIndex = 0;
+
+  bool get _canManageEvents =>
+      widget.role == 'ketua' || widget.role == 'wakil';
+
+  int get _leaderboardIndex => _canManageEvents ? 4 : 3;
 
   Future<void> _handleLogout() async {
     final bool? confirm = await showDialog<bool>(
@@ -56,9 +64,13 @@ class _PanitiaHomeScreenState extends State<PanitiaHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: _bottomNavIndex == 3
+      body: _bottomNavIndex == _leaderboardIndex
           ? const LeaderboardScreen()
-          : SafeArea(
+          : _canManageEvents && _bottomNavIndex == 3
+              ? const SafeArea(
+                  child: TabPersetujuanView(),
+                )
+              : SafeArea(
               child: Column(
                 children: [
                   // Header & Status Badge Panitia
@@ -232,26 +244,27 @@ class _PanitiaHomeScreenState extends State<PanitiaHomeScreen> {
           _buildBottomNavItem(0, Icons.receipt_long_outlined, 'Pembayaran'),
           _buildBottomNavItem(1, Icons.speed, 'Telemetri'),
           _buildBottomNavItem(2, Icons.flag_outlined, 'Event'),
-          _buildBottomNavItem(3, Icons.leaderboard_outlined, 'Klasemen'),
+          if (_canManageEvents)
+            _buildBottomNavItem(3, Icons.fact_check_outlined, 'Persetujuan'),
+          _buildBottomNavItem(
+            _leaderboardIndex,
+            Icons.leaderboard_outlined,
+            'Klasemen',
+          ),
         ],
       ),
     );
   }
 
   Widget _buildBottomNavItem(int index, IconData icon, String label) {
-    final isSelected = (_bottomNavIndex == 3 && index == 3) ||
-        (_bottomNavIndex != 3 && _selectedTabIndex == index && index != 3);
+    final isSelected = _bottomNavIndex == index;
 
     return GestureDetector(
       onTap: () {
-        if (index == 3) {
-          setState(() => _bottomNavIndex = 3);
-        } else {
-          setState(() {
-            _bottomNavIndex = 0;
-            _selectedTabIndex = index;
-          });
-        }
+        setState(() {
+          _bottomNavIndex = index;
+          if (index < 3) _selectedTabIndex = index;
+        });
       },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
