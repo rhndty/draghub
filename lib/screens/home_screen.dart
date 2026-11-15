@@ -23,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _bottomNavIndex = 0;
   int _selectedMonthFilterIndex = 0; // Filter bulan untuk tab Mendatang
 
-  String _userRole = 'PESERTA'; // Default role
+  String _userRole = 'anggota'; // Default role
   StreamSubscription<DocumentSnapshot>? _userSubscription;
 
   // Daftar role yang berhak melihat menu Admin
@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _userSubscription = FirebaseFirestore.instance.collection('users').doc(uid).snapshots().listen((doc) {
         if (doc.exists && mounted) {
           setState(() {
-            _userRole = doc.data()?['role'] ?? 'PESERTA';
+            _userRole = doc.data()?['role'] ?? 'anggota';
           });
         }
       });
