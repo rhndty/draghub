@@ -27,7 +27,16 @@ class _HomeScreenState extends State<HomeScreen> {
   StreamSubscription<DocumentSnapshot>? _userSubscription;
 
   // Daftar role yang berhak melihat menu Admin
-  bool get _isAdmin => ['SUPER_ADMIN', 'RACE_DIRECTOR', 'VERIFIKATOR', 'RACE_CONTROL'].contains(_userRole);
+  bool get _isAdmin => [
+        'SUPER_ADMIN',
+        'RACE_DIRECTOR',
+        'VERIFIKATOR',
+        'RACE_CONTROL',
+        'ketua',
+        'wakil',
+        'sekretaris',
+        'bendahara',
+      ].contains(_userRole);
 
   @override
   void initState() {
@@ -744,9 +753,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildAdminMenuIcon(
                     icon: Icons.view_sidebar_outlined, 
                     label: 'EVENT', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'RACE_DIRECTOR', 
+                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'RACE_DIRECTOR' || _userRole == 'ketua' || _userRole == 'wakil' || _userRole == 'sekretaris', 
                     onTap: () {
-                      if (_userRole != 'SUPER_ADMIN' && _userRole != 'RACE_DIRECTOR') return; 
+                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'RACE_DIRECTOR' || _userRole == 'ketua' || _userRole == 'wakil' || _userRole == 'sekretaris')) return; 
                       Navigator.pop(context);
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminEventScreen()));
                     }
@@ -754,9 +763,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildAdminMenuIcon(
                     icon: Icons.request_quote_outlined, 
                     label: 'FINANSIAL', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR', 
+                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR' || _userRole == 'bendahara' || _userRole == 'ketua', 
                     onTap: () {
-                      if (_userRole != 'SUPER_ADMIN' && _userRole != 'VERIFIKATOR') return; 
+                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR' || _userRole == 'bendahara' || _userRole == 'ketua')) return; 
                       Navigator.pop(context);
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminFinancialScreen()));
                     }
@@ -764,9 +773,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildAdminMenuIcon(
                     icon: Icons.timer_outlined, 
                     label: 'TIMING', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'RACE_CONTROL', 
+                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'RACE_CONTROL' || _userRole == 'wakil' || _userRole == 'ketua', 
                     onTap: () {
-                      if (_userRole != 'SUPER_ADMIN' && _userRole != 'RACE_CONTROL') return; 
+                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'RACE_CONTROL' || _userRole == 'wakil' || _userRole == 'ketua')) return; 
                       Navigator.pop(context);
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminTimingScreen()));
                     }
