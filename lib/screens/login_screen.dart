@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../theme/app_colors.dart';
 import 'home_screen.dart';
 import 'register_screen.dart';
-import 'panitia_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,10 +13,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  bool isRacerTab = true;
   bool isPasswordHidden = true;
   bool rememberMe = false;
-  bool _isLoading = false; // State indikator proses login
+  bool _isLoading = false;
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -31,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showMessage(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -41,84 +39,62 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Fungsi Autentikasi Firebase
+  // Fungsi Autentikasi Firebase + Cek Role Firestore (ERD v1.3.1)
   Future<void> _handleLogin() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      _showMessage(
-        'Harap isi Identitas Akses dan Kunci Telemetri',
-        isError: true,
-      );
+      _showMessage('Harap isi Identitas Akses dan Kunci Telemetri', isError: true);
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      // Mencoba masuk dengan Firebase Auth
-      UserCredential userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: email, password: password);
-
-      // Cek role pengguna di database Firestore
-      String userRole = '';
-      try {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .get();
-
-        if (userDoc.exists && userDoc.data() != null) {
-          final data = userDoc.data()!;
-          userRole = (data['role'] ?? '').toString().toLowerCase().trim();
-        } else {
-          final queryByEmail = await FirebaseFirestore.instance
-              .collection('users')
-              .where('email', isEqualTo: email)
-              .limit(1)
-              .get();
-          if (queryByEmail.docs.isNotEmpty) {
-            final data = queryByEmail.docs.first.data();
-            userRole = (data['role'] ?? '').toString().toLowerCase().trim();
-          }
-        }
-      } catch (e) {
-        debugPrint('Error saat membaca role: $e');
-      }
-
-      // Jika role belum terdaftar di database, gunakan tab login aktif
-      if (userRole.isEmpty) {
-        userRole = isRacerTab ? 'racer' : 'panitia';
-      }
-
-      final bool isPanitia =
-          (userRole == 'panitia' ||
-          userRole == 'ketua' ||
-          userRole == 'wakil' ||
-          userRole == 'sekretaris' ||
-          userRole == 'bendahara');
-
-      _showMessage(
-        'Berhasil masuk sebagai ${isPanitia ? "Panitia" : "Pembalap"}',
+      // 1. Masuk dengan Firebase Auth
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
       );
 
-      await Future.delayed(const Duration(milliseconds: 600));
+      final uid = userCredential.user!.uid;
+      final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
+      final userDoc = await userRef.get();
+
+      String fullName = 'Pembalap';
+      String role = 'anggota';
+
+      // 2. Pastikan dokumen profil di koleksi 'users' tersedia sesuai ERD v1.3.1
+      if (userDoc.exists && userDoc.data() != null) {
+        final data = userDoc.data()!;
+        fullName = (data['fullName'] ?? 'Pembalap').toString();
+        role = (data['role'] ?? 'anggota').toString().toLowerCase();
+      } else {
+        // Fallback jika akun dibuat manual lewat Firebase Auth Console
+        await userRef.set({
+          'uid': uid,
+          'email': email,
+          'fullName': userCredential.user?.displayName ?? 'Anggota Paddock',
+          'phoneNumber': '',
+          'role': 'anggota',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      _showMessage('Selamat datang, $fullName (${role.toUpperCase()})');
+
+      await Future.delayed(const Duration(milliseconds: 800));
 
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => isPanitia
-                ? PanitiaHomeScreen(role: userRole)
-                : const HomeScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Terjadi kesalahan autentikasi.';
 
-      // Menerjemahkan kode error Firebase menjadi bahasa yang mudah dimengerti
       if (e.code == 'user-not-found') {
         errorMessage = 'Pembalap dengan email ini tidak ditemukan di Paddock.';
       } else if (e.code == 'wrong-password') {
@@ -127,17 +103,36 @@ class _LoginScreenState extends State<LoginScreen> {
         errorMessage = 'Format Identitas Akses (Email) tidak valid.';
       } else if (e.code == 'user-disabled') {
         errorMessage = 'Akun ini telah dinonaktifkan oleh ofisial.';
-      } else if (e.code == 'INVALID_LOGIN_CREDENTIALS') {
+      } else if (e.code == 'invalid-credential' || e.code == 'INVALID_LOGIN_CREDENTIALS') {
         errorMessage = 'Email atau Kunci Telemetri tidak cocok.';
       }
 
       _showMessage(errorMessage, isError: true);
     } catch (e) {
-      _showMessage('Terjadi kesalahan jaringan atau server.', isError: true);
+      _showMessage('Terjadi kesalahan jaringan atau server: $e', isError: true);
     } finally {
-      // Mematikan efek loading apapun hasil akhirnya
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // Fungsi Reset Sandi via Email Firebase Auth
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showMessage('Masukkan Identitas Akses (Email) Anda terlebih dahulu untuk reset sandi.', isError: true);
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _showMessage('Tautan reset sandi telah dikirim ke $email');
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'invalid-email') {
+        _showMessage('Format email tidak valid.', isError: true);
+      } else {
+        _showMessage('Gagal mengirim email reset sandi: ${e.message}', isError: true);
       }
     }
   }
@@ -160,70 +155,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Center(
-                  child: Icon(
-                    Icons.two_wheeler,
-                    size: 30,
-                    color: AppColors.textPrimary,
-                  ),
+                  child: Icon(Icons.two_wheeler, size: 30, color: AppColors.textPrimary),
                 ),
               ),
               const SizedBox(height: 16),
               const Text(
                 'DRAG HUB',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary,
-                  letterSpacing: -1.0,
-                ),
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: AppColors.textPrimary, letterSpacing: -1.0),
               ),
               const SizedBox(height: 4),
               const Text(
                 'RACER & OFFICIAL PORTAL',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textSubtitle,
-                  letterSpacing: 2.0,
-                ),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSubtitle, letterSpacing: 2.0),
               ),
-              const SizedBox(height: 40),
-
-              Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.toggleBackground,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildRoleToggle(
-                        title: 'Pembalap',
-                        icon: Icons.sports_motorsports_outlined,
-                        isSelected: isRacerTab,
-                        onTap: () => setState(() => isRacerTab = true),
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildRoleToggle(
-                        title: 'Panitia',
-                        icon: Icons.flag_outlined,
-                        isSelected: !isRacerTab,
-                        onTap: () => setState(() => isRacerTab = false),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 32),
+              const SizedBox(height: 48),
 
               _buildInputLabel('IDENTITAS AKSES'),
               const SizedBox(height: 8),
               _buildTextField(
                 controller: _emailController,
-                hintText: 'driver@gmail.com',
+                hintText: 'driver@draghub.com',
                 prefixIcon: Icons.email_outlined,
               ),
               const SizedBox(height: 20),
@@ -248,45 +199,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 24,
                         child: Checkbox(
                           value: rememberMe,
-                          onChanged: (val) =>
-                              setState(() => rememberMe = val ?? false),
+                          onChanged: (val) => setState(() => rememberMe = val ?? false),
                           activeColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          side: const BorderSide(
-                            color: AppColors.border,
-                            width: 1.5,
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                          side: const BorderSide(color: AppColors.border, width: 1.5),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Ingat saya',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                        ),
-                      ),
+                      const Text('Ingat saya', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                     ],
                   ),
                   GestureDetector(
-                    onTap: () => _showMessage(
-                      'Fitur reset sandi sedang dalam pengembangan.',
-                    ),
-                    child: const Text(
-                      'Lupa sandi?',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
+                    onTap: _handleForgotPassword,
+                    child: const Text('Lupa sandi?', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                   ),
                 ],
               ),
               const SizedBox(height: 32),
 
-              // Tombol Login Diperbarui untuk mendukung state _isLoading
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -294,9 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    disabledBackgroundColor: AppColors.primary.withValues(
-                      alpha: 0.7,
-                    ),
+                    disabledBackgroundColor: AppColors.primary.withOpacity(0.7),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -306,29 +234,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
-                          ),
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              'MASUK PADDOCK',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
+                            Text('MASUK PADDOCK', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                             SizedBox(width: 8),
-                            Icon(
-                              Icons.arrow_forward,
-                              color: Colors.white,
-                              size: 18,
-                            ),
+                            Icon(Icons.arrow_forward, color: Colors.white, size: 18),
                           ],
                         ),
                 ),
@@ -337,47 +250,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
               Row(
                 children: [
-                  const Expanded(
-                    child: Divider(color: AppColors.border, thickness: 1),
-                  ),
+                  const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'ATAU',
-                      style: TextStyle(
-                        color: AppColors.textSubtitle.withValues(alpha: 0.5),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text('ATAU', style: TextStyle(color: AppColors.textSubtitle.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
-                  const Expanded(
-                    child: Divider(color: AppColors.border, thickness: 1),
-                  ),
+                  const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
                 ],
               ),
-              const SizedBox(height: 24),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildSocialButton(Icons.face, onTap: () {}),
-                  const SizedBox(width: 16),
-                  _buildSocialButton(
-                    Icons.g_mobiledata,
-                    iconSize: 32,
-                    onTap: () {},
-                  ),
-                ],
-              ),
-
               const SizedBox(height: 48),
 
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.toggleBackground,
                   borderRadius: BorderRadius.circular(20),
@@ -388,20 +272,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     Container(
                       width: 6,
                       height: 6,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
+                      decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                     ),
                     const SizedBox(width: 8),
                     const Text(
                       'TIMING ENGINE 2.4 GHZ READY',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textSubtitle,
-                        letterSpacing: 1.5,
-                      ),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSubtitle, letterSpacing: 1.5),
                     ),
                   ],
                 ),
@@ -411,13 +287,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    'Belum punya akun? ',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
+                  const Text('Belum punya akun? ', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -427,65 +297,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       );
                     },
-                    child: const Text(
-                      'Daftar Paddock',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: const Text('Daftar Paddock', style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.bold)),
                   ),
                 ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoleToggle({
-    required String title,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : [],
-        ),
-        child: Center(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: isSelected ? AppColors.primary : AppColors.textSecondary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                title,
-                style: TextStyle(
-                  color: isSelected
-                      ? AppColors.primary
-                      : AppColors.textSecondary,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 13,
-                ),
               ),
             ],
           ),
@@ -497,24 +311,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildInputLabel(String label) {
     return Align(
       alignment: Alignment.centerLeft,
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: AppColors.textSubtitle,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.0,
-        ),
-      ),
+      child: Text(label, style: const TextStyle(color: AppColors.textSubtitle, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
     );
   }
 
-  Widget _buildTextField({
-    required String hintText,
-    required IconData prefixIcon,
-    bool isPassword = false,
-    TextEditingController? controller,
-  }) {
+  Widget _buildTextField({required String hintText, required IconData prefixIcon, bool isPassword = false, TextEditingController? controller}) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.inputBackground,
@@ -524,55 +325,21 @@ class _LoginScreenState extends State<LoginScreen> {
       child: TextField(
         controller: controller,
         obscureText: isPassword && isPasswordHidden,
+        keyboardType: isPassword ? TextInputType.text : TextInputType.emailAddress,
         style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(
-            color: isPassword
-                ? AppColors.textSubtitle
-                : AppColors.primary.withValues(alpha: 0.4),
-          ),
-          prefixIcon: Icon(
-            prefixIcon,
-            color: AppColors.textSecondary,
-            size: 20,
-          ),
+          hintStyle: TextStyle(color: isPassword ? AppColors.textSubtitle : AppColors.primary.withOpacity(0.4)),
+          prefixIcon: Icon(prefixIcon, color: AppColors.textSecondary, size: 20),
           suffixIcon: isPassword
               ? IconButton(
-                  icon: Icon(
-                    isPasswordHidden
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    color: AppColors.textSecondary,
-                    size: 20,
-                  ),
-                  onPressed: () =>
-                      setState(() => isPasswordHidden = !isPasswordHidden),
+                  icon: Icon(isPasswordHidden ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: AppColors.textSecondary, size: 20),
+                  onPressed: () => setState(() => isPasswordHidden = !isPasswordHidden),
                 )
               : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSocialButton(
-    IconData icon, {
-    double iconSize = 24,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        border: Border.all(color: AppColors.border, width: 1.5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: AppColors.textSecondary, size: iconSize),
-        onPressed: onTap,
       ),
     );
   }
