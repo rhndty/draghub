@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../theme/app_colors.dart'; // Pastikan path ini sesuai dengan project Anda
+import '../theme/app_colors.dart';
+import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -29,7 +29,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // Logika Backend Firebase
+  // Logika Backend Firebase (ERD DragHub v1.3.1)
   Future<void> _registerUser() async {
     // 1. Validasi Input
     if (_nameController.text.trim().isEmpty ||
@@ -48,40 +48,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 2. Buat Akun di Firebase Auth
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      await AuthService().registerMember(
+        fullName: _nameController.text,
+        email: _emailController.text,
+        phoneNumber: _phoneController.text,
+        password: _passwordController.text,
       );
 
-      // 3. Simpan Profil ke Firestore koleksi 'users'
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set({
-        'uid': userCredential.user!.uid,
-        'fullName': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phoneNumber': _phoneController.text.trim(),
-        'startNumber': '', // Akan diisi saat pendaftaran kelas
-        'riderClass': 'NOVICE', // Default
-        'role': 'PESERTA',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // 4. Sukses, pindah layar
+      // 4. Sukses, kembali ke layar Login
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Akun Paddock berhasil dibuat!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('Akun Paddock berhasil dibuat! Silakan masuk.'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
-        // Kembali ke halaman Login (atau langsung diarahkan ke Home jika diinginkan)
-        Navigator.pop(context); 
+        Navigator.pop(context);
       }
     } on FirebaseAuthException catch (e) {
       String message = 'Terjadi kesalahan.';
       if (e.code == 'weak-password') {
-        message = 'Kunci Telemetri (Password) terlalu lemah.';
+        message = 'Kunci Telemetri (Password) terlalu lemah (minimal 6 karakter).';
       } else if (e.code == 'email-already-in-use') {
         message = 'Email ini sudah terdaftar di Paddock.';
       } else if (e.code == 'invalid-email') {
@@ -96,6 +84,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -108,7 +97,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // Background off-white/light gray
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
@@ -117,28 +106,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               _buildHeader(),
               const SizedBox(height: 40),
-              
-              // Form NAMA LENGKAP
+
               _buildInputLabel('NAMA LENGKAP'),
               _buildTextField(
                 controller: _nameController,
-                hintText: 'cth. Bayu Pratama',
+                hintText: 'cth. Jhon Theo',
                 icon: Icons.badge_outlined,
                 keyboardType: TextInputType.name,
               ),
               const SizedBox(height: 16),
 
-              // Form EMAIL
               _buildInputLabel('IDENTITAS AKSES (EMAIL)'),
               _buildTextField(
                 controller: _emailController,
-                hintText: 'rider@apexdrag.com',
+                hintText: 'xxxxxxxx@gmail.com',
                 icon: Icons.mail_outline,
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
 
-              // Form NOMOR TELEPON
               _buildInputLabel('NOMOR TELEPON / WHATSAPP'),
               _buildTextField(
                 controller: _phoneController,
@@ -148,7 +134,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Form PASSWORD
               _buildInputLabel('KUNCI TELEMETRI (PASSWORD)'),
               _buildTextField(
                 controller: _passwordController,
@@ -158,19 +143,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Checkbox Term & Conditions
               _buildTermsCheckbox(),
               const SizedBox(height: 24),
 
-              // Tombol Submit
               _buildSubmitButton(),
               const SizedBox(height: 24),
 
-              // Link ke Login
               _buildLoginLink(),
               const SizedBox(height: 40),
 
-              // Badge Bawah
               _buildBottomBadge(),
             ],
           ),
@@ -345,7 +326,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildLoginLink() {
     return GestureDetector(
-      onTap: () => Navigator.pop(context), // Kembali ke halaman Login
+      onTap: () => Navigator.pop(context),
       child: RichText(
         text: const TextSpan(
           style: TextStyle(fontSize: 12, color: AppColors.textMuted),
