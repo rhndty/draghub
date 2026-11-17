@@ -10,13 +10,25 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'leaderboard_screen.dart';
 import 'profile_screen.dart';
 
-// Import layar admin
+// Import Tab Rider Views (Refactor Modular Sesuai Tugas Raihan)
+import 'rider/rider_active_race_view.dart';
+import 'rider/rider_upcoming_events_view.dart';
+import '../services/motorcycle_service.dart';
+import '../models/motorcycle_model.dart';
+
+// Import Layar Pengurus (Admin / Panitia)
 import 'admin/admin_event_screen.dart';
 import 'admin/admin_financial_screen.dart';
 import 'admin/admin_timing_screen.dart';
 import 'panitia/tab_persetujuan_view.dart';
 import 'panitia/sekretaris_portal_screen.dart';
 
+/// Shell Utama Rider & Portal Komunitas (Milik Raihan / Pembalap)
+/// Sesuai PRD v1.4, ERD v1.4, & Pembagian Tugas v1.4:
+/// - Tab 0: Balapan Saya (Tiket, Nomor Balap Lunas, QR Kehadiran, Status Scrut)
+/// - Tab 1: Event Mendatang (Pendaftaran Balap, Sisa Kuota, Filter Motor Cocok)
+/// - Navigasi Rider: Balapan, Leaderboard/Podium, Garasi Motor, Profil
+/// - Shortcut Menu Pengurus (Admin Portal) bagi role panitia/ketua/wakil/sekretaris/bendahara
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -25,14 +37,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedTabIndex = 1; // Default ke 1 untuk menampilkan tab MENDATANG
+  int _selectedTabIndex = 0; // 0 = Balapan Saya / Live, 1 = Event Mendatang
   int _bottomNavIndex = 0;
-  int _selectedMonthFilterIndex = 0; // Filter bulan untuk tab Mendatang
 
-  String _userRole = 'anggota'; // Default role
+  String _userRole = 'anggota';
+  String _userName = 'Pembalap';
   StreamSubscription<DocumentSnapshot>? _userSubscription;
 
-  // Daftar role yang berhak melihat menu Admin
   bool get _isAdmin => [
     'SUPER_ADMIN',
     'RACE_DIRECTOR',
@@ -50,7 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _listenToUserRole();
   }
 
-  // Mendengarkan perubahan role user secara real-time dari Firestore
   void _listenToUserRole() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
@@ -94,21 +104,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildCurrentBody() {
+    if (_bottomNavIndex == 1) {
+      return const LeaderboardScreen();
+    } else if (_bottomNavIndex == 2 && !_isAdmin) {
+      return _buildGarageBody();
+    } else if (_bottomNavIndex == 3) {
+      return const ProfileScreen();
+    }
+    return _buildRiderHomeContent();
+  }
+
   // ===========================================================================
-  // WIDGET HEADER & NAVIGASI UMUM
+  // BERANDA UTAMA RIDER (TAB 0: AKTIF/TIKET & TAB 1: MENDATANG)
   // ===========================================================================
 
   Widget _buildHomeContent() {
     return SafeArea(
       child: Column(
         children: [
-          // Bagian Header Tetap (Tidak ikut terscroll)
           Padding(
             padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 0),
             child: Column(
               children: [
                 _buildTopHeader(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 _buildRiderStatusBadge(),
                 const SizedBox(height: 16),
                 _buildTabSelector(),
@@ -116,7 +136,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          // Bagian Konten Dinamis yang bisa di-scroll
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -166,7 +185,6 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
             '#402',
@@ -245,8 +263,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildTabButton(0, 'AKTIF (1)')),
-          Expanded(child: _buildTabButton(1, 'MENDATANG (2)')),
+          Expanded(child: _buildTabButton(0, 'BALAPAN SAYA / LIVE')),
+          Expanded(child: _buildTabButton(1, 'EVENT MENDATANG')),
         ],
       ),
     );
@@ -287,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ===========================================================================
-  // TAMPILAN TAB 2: MENDATANG (UPCOMING EVENTS)
+  // TAMPILAN GARASI MOTOR BALAP (BOTTOM NAV 2 UNTUK ANGGOTA)
   // ===========================================================================
 
   Widget _buildUpcomingView() {
@@ -478,11 +496,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
+            const SizedBox(height: 20),
+
+            StreamBuilder<List<MotorcycleModel>>(
+              stream: MotorcycleService().getMyMotorcyclesStream(userId: uid),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator(
+                        color: AppColors.primaryMaroon,
+                      ),
+                    ),
+                  );
+                }
 
   Widget _buildUpcomingSectionTitle(String title, String badgeText) {
     return Row(
@@ -1173,7 +1201,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ===========================================================================
-  // BOTTOM NAVIGATION BAR KUSTOM DENGAN SUPER ADMIN BYPASS
+  // BOTTOM NAVIGATION BAR
   // ===========================================================================
 
   Widget _buildBottomNavigationBar() {
@@ -1198,7 +1226,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBottomNavItem(int index, IconData icon) {
+  Widget _buildBottomNavItem(int index, IconData icon, String label) {
     final isSelected = _bottomNavIndex == index;
     return GestureDetector(
       onTap: () {
@@ -1240,7 +1268,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ===========================================================================
-  // FLOATING ADMIN MENU DENGAN SUPER ADMIN BYPASS
+  // FLOATING ADMIN MENU UNTUK PERAN PENGURUS
   // ===========================================================================
 
   void _showAdminFloatingMenu() {
@@ -1250,7 +1278,7 @@ class _HomeScreenState extends State<HomeScreen> {
       barrierColor: Colors.black.withOpacity(0.3),
       builder: (context) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -1383,7 +1411,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
             ],
           ),
         );
@@ -1405,14 +1433,14 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: onTap,
       child: Column(
         children: [
-          Icon(icon, size: 32, color: color),
-          const SizedBox(height: 12),
+          Icon(icon, size: 28, color: color),
+          const SizedBox(height: 8),
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+              letterSpacing: 1.0,
               color: color,
             ),
           ),
