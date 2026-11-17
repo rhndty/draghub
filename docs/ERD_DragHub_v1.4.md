@@ -128,7 +128,7 @@ erDiagram
         number elapsedTime "Waktu tempuh garis finish, dicatat manual (detik)"
         number totalTime "RT + ET (detik)"
         string status "VALID | JUMP_START | DNF | BREAKOUT"
-        string recordedBy FK "uid Ofisial/Wakil (Raihan)"
+        string recordedBy FK "uid Ofisial/Wakil (Ferdi)"
         timestamp recordedAt
     }
 
@@ -258,7 +258,7 @@ Pendaftaran peserta yang menghubungkan pembalap, motor, pembayaran, kehadiran, d
 | `elapsedTime` | Number | Ya | Waktu tempuh garis finish (detik) |
 | `totalTime` | Number | Ya | Hasil `reactionTime + elapsedTime` |
 | `status` | String | Ya | `'VALID'`, `'JUMP_START'` (start sebelum lampu hijau, ditandai Ofisial), `'DNF'` (tidak menyelesaikan lintasan, ditandai Ofisial), `'BREAKOUT'` (`totalTime` lebih cepat dari `events.bracketSeconds`, diisi otomatis oleh aplikasi) |
-| `recordedBy` | String | Ya | UID ofisial pencatat waktu (Raihan/Wakil) |
+| `recordedBy` | String | Ya | UID ofisial pencatat waktu (Ferdi/Wakil) |
 | `recordedAt` | Timestamp | Ya | Waktu pencatatan hasil |
 
 ---
