@@ -54,10 +54,10 @@ Komunitas balap motor drag mengalami kendala operasional yang masih konvensional
 | Peran (Role) | Personel Tim | Tanggung Jawab dalam Sistem |
 | :--- | :--- | :--- |
 | **Ketua (President)** | **Rafli** *(Project Lead)* | • Pengawasan menyeluruh aktivitas komunitas<br>• Menyetujui atau menolak draft event<br>• **Memulai dan mengakhiri event** (bersama Wakil)<br>• **Melakukan scrut ulang** atas keberatan rider (bersama Wakil)<br>• Memantau laporan kas dan log diskualifikasi |
-| **Wakil Ketua** | **Raihan** | • Membantu tugas eksekutif Ketua dan menggantikan jika Ketua berhalangan<br>• **Ofisial pencatat hasil waktu balap**<br>• Menyetujui atau menolak draft event (bersama Ketua)<br>• Memulai/mengakhiri event dan scrut ulang |
+| **Wakil Ketua** | **Ferdi** | • Membantu tugas eksekutif Ketua dan menggantikan jika Ketua berhalangan<br>• **Ofisial pencatat hasil waktu balap**<br>• Menyetujui atau menolak draft event (bersama Ketua)<br>• Memulai/mengakhiri event dan scrut ulang |
 | **Sekretaris** | **Alfa** | • Menyusun draft event: kelas (tipe, batas piston, braket), biaya, kuota, poster<br>• **Petugas utama meja scrutineering:** input hasil ukur piston dan, bila overspec, menetapkan diskualifikasi beserta alasan<br>• Memverifikasi kehadiran peserta lewat pemindaian QR dan menutup verifikasi kehadiran *(usulan, lihat bagian 7)* |
 | **Bendahara** | **Dika** | • Memeriksa dan memverifikasi bukti transfer pendaftaran<br>• Mengesahkan pembayaran menjadi **LUNAS (PAID)** yang menerbitkan nomor balap<br>• Menolak bukti transfer yang tidak valid dengan alasan tertulis<br>• Mencatat kas masuk/keluar dan transparansi saldo *(Bendahara tidak mengurusi teknis mesin)* |
-| **Anggota (Pembalap/Rider)** | **Ferdi** | • Mendaftarkan profil motor<br>• Mendaftar event dengan motor yang cocok dan mengunggah bukti transfer<br>• Menerima nomor balap dan QR kehadiran setelah lunas<br>• Menerima status scrut (Lolos / Diskualifikasi beserta alasan) dan melihat podium |
+| **Anggota (Pembalap/Rider)** | **Raihan** | • Mendaftarkan profil motor<br>• Mendaftar event dengan motor yang cocok dan mengunggah bukti transfer<br>• Menerima nomor balap dan QR kehadiran setelah lunas<br>• Menerima status scrut (Lolos / Diskualifikasi beserta alasan) dan melihat podium |
 
 ---
 
@@ -106,7 +106,7 @@ flowchart TD
 #### Spesifikasi UI Dialog Konfirmasi Diskualifikasi
 1. **Header:** peringatan merah tegas (`Icons.warning_amber_rounded`) bertuliskan *"KONFIRMASI DISKUALIFIKASI PEMBALAP"*.
 2. **Ringkasan data pembanding:**
-   * Nama pembalap dan nomor balap, contoh `#089 • Ferdi Rider`.
+   * Nama pembalap dan nomor balap, contoh `#089 • Raihan Rider`.
    * Batas piston event: **63,0 mm**.
    * Ukuran terukur: **64,5 mm** *(overspec +1,5 mm)*.
 3. **Field alasan (wajib):** contoh *"Piston terukur 66 mm, ketentuan event maksimal 63 mm"*. Alasan menjadi bahan laporan event.
@@ -164,10 +164,10 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Rider as Anggota (Ferdi)
+    actor Rider as Anggota (Raihan)
     actor Ben as Bendahara (Dika)
     actor Sek as Sekretaris (Alfa)
-    actor Wk as Wakil/Ofisial (Raihan)
+    actor Wk as Wakil/Ofisial (Ferdi)
     participant App as DragHub App
     participant DB as Cloud Firestore
 
