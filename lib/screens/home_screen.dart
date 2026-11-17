@@ -10,6 +10,7 @@ import 'profile_screen.dart';
 import 'admin/admin_event_screen.dart';
 import 'admin/admin_financial_screen.dart';
 import 'admin/admin_timing_screen.dart';
+import 'panitia/tab_persetujuan_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -758,6 +759,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'RACE_DIRECTOR' || _userRole == 'ketua' || _userRole == 'wakil' || _userRole == 'sekretaris')) return; 
                       Navigator.pop(context);
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminEventScreen()));
+                    }
+                  ),
+                  _buildAdminMenuIcon(
+                    icon: Icons.gavel_outlined, 
+                    label: 'PERSETUJUAN', 
+                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'ketua' || _userRole == 'wakil', 
+                    onTap: () {
+                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'ketua' || _userRole == 'wakil')) return; 
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const TabPersetujuanView()));
                     }
                   ),
                   _buildAdminMenuIcon(
