@@ -20,7 +20,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        // StreamBuilder UTAMA untuk memuat data Profil & Telemetri
         child: StreamBuilder<DocumentSnapshot>(
           stream: currentUserId != null
               ? FirebaseFirestore.instance.collection('users').doc(currentUserId).snapshots()
@@ -30,7 +29,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               return const Center(child: CircularProgressIndicator(color: AppColors.primaryMaroon));
             }
 
-            // Ambil data user, jika kosong siapkan map kosong agar tidak error
             final userData = (snapshot.data?.data() as Map<String, dynamic>?) ?? {};
 
             return SingleChildScrollView(
@@ -40,15 +38,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   _buildTopHeader(),
                   const SizedBox(height: 20),
-                  _buildProfileCard(userData), // Kirim data ke Kartu Profil
-                  const SizedBox(height: 24),
-                  _buildSectionTitleWithIcon(Icons.timeline, 'TELEMETRI UTAMA', '201M SENSOR DRAFT'),
-                  const SizedBox(height: 12),
-                  _buildTelemetryGrid(userData), // Kirim data ke Grid Telemetri
+                  _buildProfileCard(userData),
                   const SizedBox(height: 24),
                   _buildSectionTitleWithIcon(Icons.two_wheeler, 'GARASI MOTOR BALAP', 'SCRUTINEERING READY'),
                   const SizedBox(height: 12),
-                  _buildGarageList(), // Punya StreamBuilder sendiri untuk subcollection
+                  _buildGarageList(), // Terhubung ke root collection motorcycles
                   const SizedBox(height: 24),
                   _buildSectionTitleWithIcon(Icons.folder_shared_outlined, 'DOKUMEN & PADDOCK PASS', ''),
                   const SizedBox(height: 12),
@@ -65,7 +59,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- 1. HEADER ATAS ---
   Widget _buildTopHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -86,16 +79,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- 2. KARTU PROFIL DINAMIS ---
   Widget _buildProfileCard(Map<String, dynamic> userData) {
-    // Menyiapkan nilai fallback jika data di Firestore belum diisi
     String name = userData['fullName'] ?? 'Pembalap';
-    String teamName = userData['teamName']?.toString().isNotEmpty == true ? userData['teamName'] : 'Belum Bergabung Tim';
-    String startNumber = userData['startNumber']?.toString().isNotEmpty == true ? userData['startNumber'] : '#--';
-    String riderClass = userData['riderClass'] ?? 'NOVICE';
-    String imiLicense = userData['imiLicense']?.toString().isNotEmpty == true ? userData['imiLicense'] : 'Belum Terdaftar';
-    String photoUrl = userData['photoUrl'] ?? 'https://ui-avatars.com/api/?name=${name.replaceAll(' ', '+')}&background=800000&color=fff';
-
+    String role = (userData['role'] ?? 'anggota').toUpperCase();
+    String phone = userData['phoneNumber'] ?? '-';
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -124,53 +112,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark), overflow: TextOverflow.ellipsis),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.verified, color: AppColors.primaryMaroon, size: 16),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(teamName, style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+                    Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 4),
+                    Text(userData['email'] ?? '', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: AppColors.segmentBackground, borderRadius: BorderRadius.circular(4)),
-                          child: Text(riderClass.toUpperCase(), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.5)),
-                        ),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: const Color(0xFFFDF2F2), borderRadius: BorderRadius.circular(4)),
+                      child: Text('ROLE: $role', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.primaryMaroon, letterSpacing: 0.5)),
                     ),
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  const Text('GATE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.0)),
-                  Text(startNumber, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppColors.primaryMaroon)),
-                ],
-              )
             ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(color: const Color(0xFFF4F7F9), borderRadius: BorderRadius.circular(8)),
-            child: Row(
-              children: [
-                const Icon(Icons.badge_outlined, size: 16, color: Color(0xFF004D40)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('Lisensi IMI: $imiLicense', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                ),
-                Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF004D40), shape: BoxShape.circle)),
-              ],
-            ),
           ),
           const SizedBox(height: 16),
           Row(
@@ -187,19 +141,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: const Text('EDIT PROFIL', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryMaroon,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  icon: const Icon(Icons.share, size: 14, color: Colors.white),
-                  label: const Text('BAGIKAN RIDER', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
-                ),
-              ),
             ],
           )
         ],
@@ -207,7 +148,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- 3. JUDUL SEKSI & GRID TELEMETRI DINAMIS ---
   Widget _buildSectionTitleWithIcon(IconData icon, String title, String subtitle) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -225,87 +165,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildTelemetryGrid(Map<String, dynamic> userData) {
-    // Menarik data metrik dari Firestore, fallback ke 0 jika belum ada
-    String bestRt = userData['bestReactionTime']?.toString() ?? '0.000';
-    String bestTime = userData['personalBest201m']?.toString() ?? '00.000';
-    String topSpeed = userData['topSpeedKmH']?.toString() ?? '0.0';
-    String starts = userData['totalStarts']?.toString() ?? '0';
-    String podiums = userData['totalPodiums']?.toString() ?? '0';
-
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.4,
-      children: [
-        _buildTelemetryCard('BEST REACTION', bestRt, 's', 'Perfect Tree Index', Icons.bolt, true),
-        _buildTelemetryCard('PERSONAL BEST 201M', bestTime, 's', 'FFA Record Holder', Icons.emoji_events_outlined, true),
-        _buildTelemetryCard('SPEED TRAP (FINISH)', topSpeed, 'km/h', 'DragHub Wind-Tunnel Spec', Icons.speed, false),
-        _buildTelemetryCard('STARTS / PODIUM', '$starts / $podiums', '', 'Total Partisipasi', Icons.insights, false),
-      ],
-    );
-  }
-
-  Widget _buildTelemetryCard(String title, String value, String unit, String subtitle, IconData icon, bool highlightSubtitle) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.8)),
-              Icon(icon, size: 14, color: AppColors.primaryMaroon),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.textDark)),
-              if (unit.isNotEmpty) ...[
-                const SizedBox(width: 4),
-                Text(unit, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textMuted)),
-              ]
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(icon, size: 10, color: highlightSubtitle ? AppColors.primaryMaroon : AppColors.textMuted),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  subtitle,
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: highlightSubtitle ? AppColors.primaryMaroon : AppColors.textMuted),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- 4. DAFTAR GARASI MOTOR DINAMIS (DARI SUBCOLLECTION) ---
   Widget _buildGarageList() {
     return Column(
       children: [
         StreamBuilder<QuerySnapshot>(
           stream: currentUserId != null
-              ? FirebaseFirestore.instance.collection('users').doc(currentUserId).collection('garage').snapshots()
+              ? FirebaseFirestore.instance.collection('motorcycles').where('userId', isEqualTo: currentUserId).snapshots()
               : null,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -321,24 +186,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(20),
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.borderLight)),
-                child: const Text('Garasi kosong. Belum ada motor yang didaftarkan.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+                child: const Text('Garasi kosong. Daftarkan spek motor agar bisa mengikuti balapan.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
               );
             }
 
-            // Looping data motor dari subcollection garage
             return Column(
               children: snapshot.data!.docs.map((doc) {
-                final bikeData = doc.data() as Map<String, dynamic>;
+                final data = doc.data() as Map<String, dynamic>;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: _buildGarageCard(
-                    className: bikeData['targetClass'] ?? 'Kelas Bebas',
-                    bikeName: bikeData['modelBasis'] ?? 'Motor Balap',
-                    status: bikeData['status'] ?? 'MENUNGGU VERIFIKASI',
-                    transponder: bikeData['transponder']?.toString().isNotEmpty == true ? bikeData['transponder'] : 'Belum Ada',
-                    weight: '${bikeData['weightKg'] ?? 0} KG',
-                    note: bikeData['tunerNotes']?.toString().isNotEmpty == true ? bikeData['tunerNotes'] : 'Tidak ada catatan',
-                    isVerified: bikeData['status'] == 'TERVERIFIKASI', // Status akan merubah warna/ikon
+                    brand: data['brand'] ?? 'Merk',
+                    model: data['modelName'] ?? 'Model',
+                    vehicleType: data['vehicleType'] ?? 'MATIC',
+                    piston: data['pistonDiameterMm']?.toString() ?? '0',
                   ),
                 );
               }).toList(),
@@ -362,103 +223,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildGarageCard({
-    required String className,
-    required String bikeName,
-    required String status,
-    required String transponder,
-    required String weight,
-    required String note,
-    required bool isVerified,
-  }) {
+  Widget _buildGarageCard({required String brand, required String model, required String vehicleType, required String piston}) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderLight),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.borderLight)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text('KELAS: ${className.toUpperCase()}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.0), overflow: TextOverflow.ellipsis),
-              ),
-              const SizedBox(width: 8),
+              Text(brand.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.0)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isVerified ? const Color(0xFFE8F5E9) : AppColors.segmentBackground, 
-                  borderRadius: BorderRadius.circular(4)
-                ),
-                child: Text(
-                  status, 
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isVerified ? Colors.green.shade800 : AppColors.textDark, letterSpacing: 0.5)
-                ),
+                decoration: BoxDecoration(color: AppColors.segmentBackground, borderRadius: BorderRadius.circular(4)),
+                child: Text(vehicleType, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textDark, letterSpacing: 0.5)),
               )
             ],
           ),
           const SizedBox(height: 4),
-          Text(bikeName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textDark)),
+          Text(model, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textDark)),
           const SizedBox(height: 12),
-          
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.segmentBackground, borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: const Color(0xFFF4F7F9), borderRadius: BorderRadius.circular(8)),
             child: Row(
               children: [
-                Expanded(child: _buildBikeSpec('TRANSPONDER', transponder)),
-                Container(width: 1, height: 24, color: AppColors.borderLight),
-                const SizedBox(width: 12),
-                Expanded(child: _buildBikeSpec('BOBOT SCRUT', weight)),
+                const Icon(Icons.straighten, size: 14, color: Color(0xFF004D40)),
+                const SizedBox(width: 8),
+                Text('Piston Diameter: $piston mm', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textDark)),
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Icon(isVerified ? Icons.check_circle_outline : Icons.tune, size: 14, color: isVerified ? Colors.green : AppColors.textDark),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(note, style: const TextStyle(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                children: const [
-                  Text('DETAIL SETUP', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primaryMaroon, letterSpacing: 0.5)),
-                  SizedBox(width: 4),
-                  Icon(Icons.arrow_forward_ios, size: 10, color: AppColors.primaryMaroon),
-                ],
-              )
-            ],
-          )
         ],
       ),
     );
   }
 
-  Widget _buildBikeSpec(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.0)),
-        const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: AppColors.textDark), overflow: TextOverflow.ellipsis),
-      ],
-    );
-  }
-
-  // --- 5. MENU DOKUMEN & PENGATURAN ---
   Widget _buildMenuOptions() {
     return Container(
       decoration: BoxDecoration(
@@ -471,8 +272,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildMenuTile(Icons.qr_code_2, 'E-Paddock Pass & Barcode Gate', 'Akses Jalur Pit, Grid Walk & Scrutineering'),
           const Divider(height: 1, color: AppColors.borderLight),
           _buildMenuTile(Icons.health_and_safety_outlined, 'Asuransi Balap & Rekam Medis', 'Gold Card BPJS & IMI Racing Coverage Aktif'),
-          const Divider(height: 1, color: AppColors.borderLight),
-          _buildMenuTile(Icons.tune, 'Preferensi Sensor & Akun', 'Pengaturan Notifikasi Event & Transponder Sync'),
         ],
       ),
     );
@@ -496,7 +295,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // --- 6. FOOTER BAWAH ---
   Widget _buildFooter() {
     return Center(
       child: Column(
@@ -506,11 +304,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppColors.primaryMaroon, shape: BoxShape.circle)),
               const SizedBox(width: 8),
-              const Text('DRAGHUB DRAG CHRONO SYSTEM V1.0', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.5)),
+              const Text('DRAGHUB SYSTEM V1.3', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1.5)),
             ],
           ),
-          const SizedBox(height: 6),
-          Text('Official Scrutineered Profile • Live Synced', style: TextStyle(fontSize: 9, color: AppColors.textMuted.withOpacity(0.7))),
         ],
       ),
     );

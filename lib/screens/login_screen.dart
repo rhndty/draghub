@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
-import 'home_screen.dart'; // <-- Tanda // sudah dihapus agar halaman Home dikenali
+import 'home_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -12,10 +13,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  bool isRacerTab = true; 
   bool isPasswordHidden = true;
   bool rememberMe = false;
-  bool _isLoading = false; // State indikator proses login
+  bool _isLoading = false;
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -28,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showMessage(String message, {bool isError = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -38,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Fungsi Autentikasi Firebase
+  // Fungsi Autentikasi Firebase + Cek Role Firestore (ERD v1.3.1)
   Future<void> _handleLogin() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -51,29 +52,49 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Mencoba masuk dengan Firebase Auth
+      // 1. Masuk dengan Firebase Auth
       UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      _showMessage('Berhasil masuk sebagai ${isRacerTab ? 'Pembalap' : 'Panitia'}');
-      
-      // Jeda 1 detik agar pesan sukses terbaca oleh pengguna
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // Navigasi ke beranda jika login berhasil (Tanda // sudah dihapus)
+      final uid = userCredential.user!.uid;
+      final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
+      final userDoc = await userRef.get();
+
+      String fullName = 'Pembalap';
+      String role = 'anggota';
+
+      // 2. Pastikan dokumen profil di koleksi 'users' tersedia sesuai ERD v1.3.1
+      if (userDoc.exists && userDoc.data() != null) {
+        final data = userDoc.data()!;
+        fullName = (data['fullName'] ?? 'Pembalap').toString();
+        role = (data['role'] ?? 'anggota').toString().toLowerCase();
+      } else {
+        // Fallback jika akun dibuat manual lewat Firebase Auth Console
+        await userRef.set({
+          'uid': uid,
+          'email': email,
+          'fullName': userCredential.user?.displayName ?? 'Anggota Paddock',
+          'phoneNumber': '',
+          'role': 'anggota',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      _showMessage('Selamat datang, $fullName (${role.toUpperCase()})');
+
+      await Future.delayed(const Duration(milliseconds: 800));
+
       if (mounted) {
         Navigator.pushReplacement(
-          context, 
-          MaterialPageRoute(builder: (context) => const HomeScreen())
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
-      
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Terjadi kesalahan autentikasi.';
-      
-      // Menerjemahkan kode error Firebase menjadi bahasa yang mudah dimengerti
+
       if (e.code == 'user-not-found') {
         errorMessage = 'Pembalap dengan email ini tidak ditemukan di Paddock.';
       } else if (e.code == 'wrong-password') {
@@ -82,17 +103,36 @@ class _LoginScreenState extends State<LoginScreen> {
         errorMessage = 'Format Identitas Akses (Email) tidak valid.';
       } else if (e.code == 'user-disabled') {
         errorMessage = 'Akun ini telah dinonaktifkan oleh ofisial.';
-      } else if (e.code == 'INVALID_LOGIN_CREDENTIALS') {
-         errorMessage = 'Email atau Kunci Telemetri tidak cocok.';
+      } else if (e.code == 'invalid-credential' || e.code == 'INVALID_LOGIN_CREDENTIALS') {
+        errorMessage = 'Email atau Kunci Telemetri tidak cocok.';
       }
 
       _showMessage(errorMessage, isError: true);
     } catch (e) {
-      _showMessage('Terjadi kesalahan jaringan atau server.', isError: true);
+      _showMessage('Terjadi kesalahan jaringan atau server: $e', isError: true);
     } finally {
-      // Mematikan efek loading apapun hasil akhirnya
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // Fungsi Reset Sandi via Email Firebase Auth
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      _showMessage('Masukkan Identitas Akses (Email) Anda terlebih dahulu untuk reset sandi.', isError: true);
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _showMessage('Tautan reset sandi telah dikirim ke $email');
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'invalid-email') {
+        _showMessage('Format email tidak valid.', isError: true);
+      } else {
+        _showMessage('Gagal mengirim email reset sandi: ${e.message}', isError: true);
       }
     }
   }
@@ -115,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Center(
-                  child: Icon(Icons.two_wheeler, size: 30, color: AppColors.textPrimary), 
+                  child: Icon(Icons.two_wheeler, size: 30, color: AppColors.textPrimary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -128,10 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 'RACER & OFFICIAL PORTAL',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textSubtitle, letterSpacing: 2.0),
               ),
-              const SizedBox(height: 40),
-
-
-              const SizedBox(height: 32),
+              const SizedBox(height: 48),
 
               _buildInputLabel('IDENTITAS AKSES'),
               const SizedBox(height: 8),
@@ -173,14 +210,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   GestureDetector(
-                    onTap: () => _showMessage('Fitur reset sandi sedang dalam pengembangan.'), 
+                    onTap: _handleForgotPassword,
                     child: const Text('Lupa sandi?', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                   ),
                 ],
               ),
               const SizedBox(height: 32),
 
-              // Tombol Login Diperbarui untuk mendukung state _isLoading
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -194,11 +230,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     elevation: 0,
                   ),
-                  child: _isLoading 
+                  child: _isLoading
                       ? const SizedBox(
-                          width: 24, 
-                          height: 24, 
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                         )
                       : const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -222,8 +258,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
                 ],
               ),
-              const SizedBox(height: 24),
-
               const SizedBox(height: 48),
 
               Container(
@@ -274,29 +308,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildRoleToggle({required String title, required IconData icon, required bool isSelected, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: isSelected ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
-        ),
-        child: Center(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 18, color: isSelected ? AppColors.primary : AppColors.textSecondary),
-              const SizedBox(width: 6),
-              Text(title, style: TextStyle(color: isSelected ? AppColors.primary : AppColors.textSecondary, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, fontSize: 13)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildInputLabel(String label) {
     return Align(
       alignment: Alignment.centerLeft,
@@ -314,6 +325,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: TextField(
         controller: controller,
         obscureText: isPassword && isPasswordHidden,
+        keyboardType: isPassword ? TextInputType.text : TextInputType.emailAddress,
         style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: hintText,
@@ -328,22 +340,6 @@ class _LoginScreenState extends State<LoginScreen> {
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSocialButton(IconData icon, {double iconSize = 24, required VoidCallback onTap}) {
-    return Container(
-      width: 56,
-      height: 56,
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        border: Border.all(color: AppColors.border, width: 1.5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: AppColors.textSecondary, size: iconSize),
-        onPressed: onTap,
       ),
     );
   }

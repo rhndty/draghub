@@ -7,9 +7,11 @@ import 'leaderboard_screen.dart';
 import 'profile_screen.dart';
 
 // Import layar admin
-import 'admin_event_screen.dart';
-import 'admin_financial_screen.dart';
-import 'admin_timing_screen.dart';
+import 'admin/admin_event_screen.dart';
+import 'admin/admin_financial_screen.dart';
+import 'admin/admin_timing_screen.dart';
+import 'panitia/tab_persetujuan_view.dart';
+import 'panitia/sekretaris_portal_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,11 +25,20 @@ class _HomeScreenState extends State<HomeScreen> {
   int _bottomNavIndex = 0;
   int _selectedMonthFilterIndex = 0; // Filter bulan untuk tab Mendatang
 
-  String _userRole = 'PESERTA'; // Default role
+  String _userRole = 'anggota'; // Default role
   StreamSubscription<DocumentSnapshot>? _userSubscription;
 
   // Daftar role yang berhak melihat menu Admin
-  bool get _isAdmin => ['SUPER_ADMIN', 'RACE_DIRECTOR', 'VERIFIKATOR', 'RACE_CONTROL'].contains(_userRole);
+  bool get _isAdmin => [
+        'SUPER_ADMIN',
+        'RACE_DIRECTOR',
+        'VERIFIKATOR',
+        'RACE_CONTROL',
+        'ketua',
+        'wakil',
+        'sekretaris',
+        'bendahara',
+      ].contains(_userRole);
 
   @override
   void initState() {
@@ -42,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _userSubscription = FirebaseFirestore.instance.collection('users').doc(uid).snapshots().listen((doc) {
         if (doc.exists && mounted) {
           setState(() {
-            _userRole = doc.data()?['role'] ?? 'PESERTA';
+            _userRole = doc.data()?['role'] ?? 'anggota';
           });
         }
       });
@@ -744,19 +755,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildAdminMenuIcon(
                     icon: Icons.view_sidebar_outlined, 
                     label: 'EVENT', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'RACE_DIRECTOR', 
+                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'RACE_DIRECTOR' || _userRole == 'ketua' || _userRole == 'wakil' || _userRole == 'sekretaris', 
                     onTap: () {
-                      if (_userRole != 'SUPER_ADMIN' && _userRole != 'RACE_DIRECTOR') return; 
+                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'RACE_DIRECTOR' || _userRole == 'ketua' || _userRole == 'wakil' || _userRole == 'sekretaris')) return; 
                       Navigator.pop(context);
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminEventScreen()));
                     }
                   ),
                   _buildAdminMenuIcon(
+                    icon: Icons.gavel_outlined, 
+                    label: 'PERSETUJUAN', 
+                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'ketua' || _userRole == 'wakil', 
+                    onTap: () {
+                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'ketua' || _userRole == 'wakil')) return; 
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const TabPersetujuanView()));
+                    }
+                  ),
+                  _buildAdminMenuIcon(
                     icon: Icons.request_quote_outlined, 
                     label: 'FINANSIAL', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR', 
+                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR' || _userRole == 'bendahara' || _userRole == 'ketua', 
                     onTap: () {
-                      if (_userRole != 'SUPER_ADMIN' && _userRole != 'VERIFIKATOR') return; 
+                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR' || _userRole == 'bendahara' || _userRole == 'ketua')) return; 
                       Navigator.pop(context);
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminFinancialScreen()));
                     }
@@ -764,11 +785,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildAdminMenuIcon(
                     icon: Icons.timer_outlined, 
                     label: 'TIMING', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'RACE_CONTROL', 
+                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'RACE_CONTROL' || _userRole == 'wakil' || _userRole == 'ketua', 
                     onTap: () {
-                      if (_userRole != 'SUPER_ADMIN' && _userRole != 'RACE_CONTROL') return; 
+                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'RACE_CONTROL' || _userRole == 'wakil' || _userRole == 'ketua')) return; 
                       Navigator.pop(context);
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminTimingScreen()));
+                    }
+                  ),
+                  _buildAdminMenuIcon(
+                    icon: Icons.assignment_turned_in_outlined, 
+                    label: 'SEKRETARIS', 
+                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'sekretaris' || _userRole == 'ketua' || _userRole == 'wakil', 
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const SekretarisPortalScreen()));
                     }
                   ),
                 ],
