@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
-import '../admin/admin_financial_screen.dart';
 
 class AdminTimingScreen extends StatefulWidget {
   const AdminTimingScreen({super.key});
