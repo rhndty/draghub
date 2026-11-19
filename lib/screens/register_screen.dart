@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../theme/app_colors.dart';
 import '../services/auth_service.dart';
 
@@ -69,7 +70,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } on FirebaseAuthException catch (e) {
       String message = 'Terjadi kesalahan.';
       if (e.code == 'weak-password') {
-        message = 'Kunci Telemetri (Password) terlalu lemah (minimal 6 karakter).';
+        message =
+            'Kunci Telemetri (Password) terlalu lemah (minimal 6 karakter).';
       } else if (e.code == 'email-already-in-use') {
         message = 'Email ini sudah terdaftar di Paddock.';
       } else if (e.code == 'invalid-email') {
@@ -171,7 +173,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.borderLight),
           ),
-          child: const Icon(Icons.speed, color: AppColors.primaryMaroon, size: 32),
+          child: const Icon(
+            Icons.speed,
+            color: AppColors.primaryMaroon,
+            size: 32,
+          ),
         ),
         const SizedBox(height: 16),
         const Text(
@@ -232,7 +238,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         controller: controller,
         obscureText: isPassword ? _obscurePassword : false,
         keyboardType: keyboardType,
-        style: const TextStyle(fontSize: 14, color: AppColors.textDark, fontWeight: FontWeight.w500),
+        style: const TextStyle(
+          fontSize: 14,
+          color: AppColors.textDark,
+          fontWeight: FontWeight.w500,
+        ),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
@@ -240,11 +250,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
-                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    _obscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                     size: 20,
                     color: AppColors.textMuted,
                   ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 )
               : null,
           border: InputBorder.none,
@@ -264,9 +277,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Checkbox(
             value: _agreeToTerms,
             activeColor: AppColors.primaryMaroon,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
             side: const BorderSide(color: AppColors.borderLight, width: 1.5),
-            onChanged: (value) => setState(() => _agreeToTerms = value ?? false),
+            onChanged: (value) =>
+                setState(() => _agreeToTerms = value ?? false),
           ),
         ),
         const SizedBox(width: 12),
@@ -275,12 +291,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
             padding: const EdgeInsets.only(top: 4.0),
             child: RichText(
               text: const TextSpan(
-                style: TextStyle(fontSize: 11, color: AppColors.textMuted, height: 1.5),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  height: 1.5,
+                ),
                 children: [
                   TextSpan(text: 'Saya menyetujui '),
-                  TextSpan(text: 'Regulasi Balap', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryMaroon)),
+                  TextSpan(
+                    text: 'Regulasi Balap',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryMaroon,
+                    ),
+                  ),
                   TextSpan(text: ' & '),
-                  TextSpan(text: 'Kebijakan Privasi', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryMaroon)),
+                  TextSpan(
+                    text: 'Kebijakan Privasi',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryMaroon,
+                    ),
+                  ),
                   TextSpan(text: ' Apex'),
                 ],
               ),
@@ -300,21 +332,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primaryMaroon,
           disabledBackgroundColor: AppColors.primaryMaroon.withOpacity(0.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 0,
         ),
         child: _isLoading
             ? const SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
                   Text(
                     'BUAT AKUN PADDOCK',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                      color: Colors.white,
+                    ),
                   ),
                   SizedBox(width: 8),
                   Icon(Icons.arrow_forward, size: 18, color: Colors.white),
@@ -334,7 +376,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             TextSpan(text: 'Sudah punya akun? '),
             TextSpan(
               text: 'MASUK PADDOCK',
-              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryMaroon, letterSpacing: 0.5),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryMaroon,
+                letterSpacing: 0.5,
+              ),
             ),
           ],
         ),
@@ -356,7 +402,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Container(
             width: 6,
             height: 6,
-            decoration: const BoxDecoration(color: AppColors.primaryMaroon, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: AppColors.primaryMaroon,
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 8),
           const Text(
