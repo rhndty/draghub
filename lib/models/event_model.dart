@@ -15,7 +15,8 @@ class EventModel {
   final int registrationFee; // Biaya pendaftaran (Rp)
   final int quota; // Kuota total peserta
   final int registeredCount; // Jumlah peserta lunas (counter nomor balap)
-  final String status; // 'DRAFT' | 'PUBLISHED' | 'ONGOING' | 'COMPLETED' | 'REJECTED'
+  final String
+  status; // 'DRAFT' | 'PUBLISHED' | 'ONGOING' | 'COMPLETED' | 'REJECTED'
   final String createdBy; // UID Sekretaris pembuat draft
   final String? approvedBy; // UID Ketua/Wakil yang approve
   final List<Map<String, dynamic>>? podium; // Snapshot juara 1-3 saat COMPLETED
@@ -84,7 +85,9 @@ class EventModel {
 
     List<Map<String, dynamic>>? parsePodium(dynamic list) {
       if (list is List) {
-        return list.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+        return list
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
       }
       return null;
     }
@@ -97,7 +100,8 @@ class EventModel {
       imageUrl: data['imageUrl'] ?? '',
       className: data['className'] ?? '',
       vehicleType: (data['vehicleType'] ?? 'MATIC').toString().toUpperCase(),
-      maxPistonDiameterMm: (data['maxPistonDiameterMm'] as num?)?.toDouble() ?? 63.0,
+      maxPistonDiameterMm:
+          (data['maxPistonDiameterMm'] as num?)?.toDouble() ?? 63.0,
       bracketSeconds: (data['bracketSeconds'] as num?)?.toDouble() ?? 7.0,
       registrationFee: (data['registrationFee'] as num?)?.toInt() ?? 0,
       quota: (data['quota'] as num?)?.toInt() ?? 0,
@@ -129,11 +133,13 @@ class EventModel {
       'createdBy': createdBy,
       'approvedBy': approvedBy,
       'podium': podium,
-      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
-      'attendanceClosedAt':
-          attendanceClosedAt != null ? Timestamp.fromDate(attendanceClosedAt!) : null,
+      'completedAt': completedAt != null
+          ? Timestamp.fromDate(completedAt!)
+          : null,
+      'attendanceClosedAt': attendanceClosedAt != null
+          ? Timestamp.fromDate(attendanceClosedAt!)
+          : null,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 }
-

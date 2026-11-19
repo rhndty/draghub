@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../services/attendance_service.dart';
 import '../../services/event_service.dart';
 import '../../models/event_model.dart';
@@ -74,7 +75,10 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
               backgroundColor: Colors.red.shade800,
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Tutup Sekarang', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Tutup Sekarang',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -84,7 +88,9 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
       setState(() => _isProcessing = true);
       try {
         final count = await _attendanceService.closeAttendance(event.eventId);
-        _showMessage('Verifikasi kehadiran resmi ditutup. $count peserta dicoret.');
+        _showMessage(
+          'Verifikasi kehadiran resmi ditutup. $count peserta dicoret.',
+        );
       } catch (e) {
         _showMessage('Gagal menutup kehadiran: $e', isError: true);
       } finally {
@@ -160,7 +166,10 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                                   value: e.eventId,
                                   child: Text(
                                     '${e.title} (${e.className})',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 );
                               }).toList(),
@@ -177,7 +186,10 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                 // Bar Tombol Aksi Kehadiran & Status Penutupan
                 if (currentEvent != null)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -187,7 +199,9 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                               width: 8,
                               height: 8,
                               decoration: BoxDecoration(
-                                color: currentEvent.isAttendanceClosed ? Colors.red : Colors.green,
+                                color: currentEvent.isAttendanceClosed
+                                    ? Colors.red
+                                    : Colors.green,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -199,7 +213,9 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w900,
-                                color: currentEvent.isAttendanceClosed ? Colors.red : Colors.green,
+                                color: currentEvent.isAttendanceClosed
+                                    ? Colors.red
+                                    : Colors.green,
                               ),
                             ),
                           ],
@@ -209,15 +225,28 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                             onPressed: _isProcessing
                                 ? null
                                 : () => _confirmCloseAttendance(currentEvent!),
-                            icon: const Icon(Icons.lock_clock, size: 14, color: Colors.red),
+                            icon: const Icon(
+                              Icons.lock_clock,
+                              size: 14,
+                              color: Colors.red,
+                            ),
                             label: const Text(
                               'TUTUP KEHADIRAN',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red,
+                              ),
                             ),
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: Colors.red),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
                             ),
                           ),
                       ],
@@ -235,13 +264,25 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                           style: const TextStyle(fontSize: 13),
                           decoration: InputDecoration(
                             hintText: 'Tempel / Input Registration ID hasil scan QR...',
-                            hintStyle: const TextStyle(fontSize: 11, color: AppColors.textMuted),
-                            prefixIcon: const Icon(Icons.qr_code_scanner, size: 18),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            hintStyle: const TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.qr_code_scanner,
+                              size: 18,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                           ),
                           onSubmitted: (val) {
-                            if (val.trim().isNotEmpty) _handleCheckIn(val.trim());
+                            if (val.trim().isNotEmpty)
+                              _handleCheckIn(val.trim());
                           },
                         ),
                       ),
@@ -256,13 +297,22 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryMaroon,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           elevation: 0,
                         ),
                         child: const Text(
                           'HADIR',
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -274,12 +324,21 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                 // Daftar Peserta Lunas
                 Expanded(
                   child: _selectedEventId == null
-                      ? const Center(child: Text('Pilih event terlebih dahulu.'))
+                      ? const Center(
+                          child: Text('Pilih event terlebih dahulu.'),
+                        )
                       : StreamBuilder<List<Map<String, dynamic>>>(
-                          stream: _attendanceService.getPaidRegistrationsStream(_selectedEventId!),
+                          stream: _attendanceService.getPaidRegistrationsStream(
+                            _selectedEventId!,
+                          ),
                           builder: (context, regSnapshot) {
-                            if (regSnapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator(color: AppColors.primaryMaroon));
+                            if (regSnapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primaryMaroon,
+                                ),
+                              );
                             }
 
                             final list = regSnapshot.data ?? [];
@@ -287,7 +346,10 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                               return Center(
                                 child: Text(
                                   'Belum ada peserta yang lunas di event ini.',
-                                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textMuted,
+                                  ),
                                 ),
                               );
                             }
@@ -295,15 +357,18 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                             return ListView.separated(
                               padding: const EdgeInsets.all(16),
                               itemCount: list.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 10),
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 10),
                               itemBuilder: (context, index) {
                                 final rider = list[index];
                                 final regId = rider['registrationId'] ?? '';
-                                final startNumber = rider['assignedStartNumber'];
+                                final startNumber =
+                                    rider['assignedStartNumber'];
                                 final startNumberStr = startNumber != null
                                     ? '#${startNumber.toString().padLeft(3, '0')}'
                                     : '---';
-                                final attendance = rider['attendanceStatus'] ?? 'PENDING';
+                                final attendance =
+                                    rider['attendanceStatus'] ?? 'PENDING';
 
                                 Color statusBg;
                                 Color statusFg;
@@ -328,7 +393,9 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: AppColors.borderLight),
+                                    border: Border.all(
+                                      color: AppColors.borderLight,
+                                    ),
                                   ),
                                   child: Row(
                                     children: [
@@ -337,7 +404,9 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                                         height: 44,
                                         decoration: BoxDecoration(
                                           color: AppColors.segmentBackground,
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Center(
                                           child: Text(
@@ -353,7 +422,8 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               rider['riderName'] ?? 'Pembalap',
@@ -379,22 +449,38 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
                                               ? null
                                               : () => _handleCheckIn(regId),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.green.shade700,
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                            backgroundColor:
+                                                Colors.green.shade700,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 6,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
                                             elevation: 0,
                                           ),
                                           child: const Text(
                                             'HADIRKAN',
-                                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         )
                                       else
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
                                           decoration: BoxDecoration(
                                             color: statusBg,
-                                            borderRadius: BorderRadius.circular(6),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: Text(
                                             statusLabel,
@@ -421,4 +507,3 @@ class _TabKehadiranViewState extends State<TabKehadiranView> {
     );
   }
 }
-
