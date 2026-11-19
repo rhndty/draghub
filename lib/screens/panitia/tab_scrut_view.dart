@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../services/scrut_service.dart';
 import '../../services/event_service.dart';
 import '../../models/event_model.dart';
@@ -55,7 +56,10 @@ class _TabScrutViewState extends State<TabScrutView> {
               isError: measuredMm > event.maxPistonDiameterMm,
             );
           } catch (e) {
-            _showMessage(e.toString().replaceAll('Exception: ', ''), isError: true);
+            _showMessage(
+              e.toString().replaceAll('Exception: ', ''),
+              isError: true,
+            );
           } finally {
             if (mounted) setState(() => _isProcessing = false);
           }
@@ -92,7 +96,10 @@ class _TabScrutViewState extends State<TabScrutView> {
                       ),
                       title: Text(
                         'Piston ${item['measuredPistonMm']} mm (${item['status']})',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
                       subtitle: Text(
                         'Alasan: ${item['reason'] ?? '-'}',
@@ -179,11 +186,15 @@ class _TabScrutViewState extends State<TabScrutView> {
                                   value: e.eventId,
                                   child: Text(
                                     '${e.title} (Maks ${e.maxPistonDiameterMm.toStringAsFixed(0)}mm)',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 );
                               }).toList(),
-                              onChanged: (val) => setState(() => _selectedEventId = val),
+                              onChanged: (val) =>
+                                  setState(() => _selectedEventId = val),
                             ),
                           ),
                         ),
@@ -194,16 +205,28 @@ class _TabScrutViewState extends State<TabScrutView> {
                 // Batas Regulasi Info Bar
                 if (currentEvent != null)
                   Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFDE8E8),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.primaryMaroon.withValues(alpha: 0.2)),
+                      border: Border.all(
+                        color: AppColors.primaryMaroon.withValues(alpha: 0.2),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.speed, size: 16, color: AppColors.primaryMaroon),
+                        const Icon(
+                          Icons.speed,
+                          size: 16,
+                          color: AppColors.primaryMaroon,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -226,10 +249,17 @@ class _TabScrutViewState extends State<TabScrutView> {
                   child: _selectedEventId == null
                       ? const Center(child: Text('Pilih event.'))
                       : StreamBuilder<List<Map<String, dynamic>>>(
-                          stream: _scrutService.getScrutQueueStream(_selectedEventId!),
+                          stream: _scrutService.getScrutQueueStream(
+                            _selectedEventId!,
+                          ),
                           builder: (context, queueSnapshot) {
-                            if (queueSnapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator(color: AppColors.primaryMaroon));
+                            if (queueSnapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primaryMaroon,
+                                ),
+                              );
                             }
 
                             final queue = queueSnapshot.data ?? [];
@@ -237,7 +267,10 @@ class _TabScrutViewState extends State<TabScrutView> {
                               return Center(
                                 child: Text(
                                   'Belum ada peserta yang hadir untuk discrutineering.',
-                                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textMuted,
+                                  ),
                                 ),
                               );
                             }
@@ -245,15 +278,18 @@ class _TabScrutViewState extends State<TabScrutView> {
                             return ListView.separated(
                               padding: const EdgeInsets.all(16),
                               itemCount: queue.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 10),
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 10),
                               itemBuilder: (context, index) {
                                 final rider = queue[index];
-                                final startNumber = rider['assignedStartNumber'];
+                                final startNumber =
+                                    rider['assignedStartNumber'];
                                 final startNumberStr = startNumber != null
                                     ? '#${startNumber.toString().padLeft(3, '0')}'
                                     : '---';
 
-                                final scrutStatus = rider['scrutineeringStatus'] ?? 'PENDING';
+                                final scrutStatus =
+                                    rider['scrutineeringStatus'] ?? 'PENDING';
                                 final measured = rider['measuredPistonMm'];
 
                                 return Container(
@@ -265,8 +301,8 @@ class _TabScrutViewState extends State<TabScrutView> {
                                       color: scrutStatus == 'DISQUALIFIED'
                                           ? Colors.red.shade300
                                           : (scrutStatus == 'PASSED'
-                                              ? Colors.green.shade300
-                                              : AppColors.borderLight),
+                                                ? Colors.green.shade300
+                                                : AppColors.borderLight),
                                     ),
                                   ),
                                   child: Row(
@@ -276,7 +312,9 @@ class _TabScrutViewState extends State<TabScrutView> {
                                         height: 44,
                                         decoration: BoxDecoration(
                                           color: AppColors.segmentBackground,
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Center(
                                           child: Text(
@@ -292,7 +330,8 @@ class _TabScrutViewState extends State<TabScrutView> {
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               rider['riderName'] ?? 'Pembalap',
@@ -325,22 +364,36 @@ class _TabScrutViewState extends State<TabScrutView> {
                                       ),
                                       // Status / Tombol
                                       Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
                                         children: [
                                           ElevatedButton(
                                             onPressed: _isProcessing
                                                 ? null
-                                                : () => _openScrutDialog(rider, currentEvent!),
+                                                : () => _openScrutDialog(
+                                                    rider,
+                                                    currentEvent!,
+                                                  ),
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: scrutStatus == 'PENDING'
+                                              backgroundColor:
+                                                  scrutStatus == 'PENDING'
                                                   ? AppColors.primaryMaroon
                                                   : Colors.blueGrey,
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 6,
+                                                  ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
                                               elevation: 0,
                                             ),
                                             child: Text(
-                                              scrutStatus == 'PENDING' ? 'UKUR PISTON' : 'SCRUT ULANG',
+                                              scrutStatus == 'PENDING'
+                                                  ? 'UKUR PISTON'
+                                                  : 'SCRUT ULANG',
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 10,
@@ -348,17 +401,22 @@ class _TabScrutViewState extends State<TabScrutView> {
                                               ),
                                             ),
                                           ),
-                                          if (rider['scrutineeringHistory'] != null)
+                                          if (rider['scrutineeringHistory'] !=
+                                              null)
                                             InkWell(
-                                              onTap: () => _showHistoryDialog(rider),
+                                              onTap: () =>
+                                                  _showHistoryDialog(rider),
                                               child: const Padding(
-                                                padding: EdgeInsets.only(top: 4),
+                                                padding: EdgeInsets.only(
+                                                  top: 4,
+                                                ),
                                                 child: Text(
                                                   'Riwayat',
                                                   style: TextStyle(
                                                     fontSize: 10,
                                                     color: Colors.blue,
-                                                    decoration: TextDecoration.underline,
+                                                    decoration: TextDecoration
+                                                        .underline,
                                                   ),
                                                 ),
                                               ),
@@ -436,7 +494,9 @@ class _ScrutInspectionDialogState extends State<_ScrutInspectionDialog> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                isOverspec ? 'PERINGATAN DISKUALIFIKASI' : 'Inspeksi Meja Scrut',
+                isOverspec
+                    ? 'PERINGATAN DISKUALIFIKASI'
+                    : 'Inspeksi Meja Scrut',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 15,
@@ -465,17 +525,28 @@ class _ScrutInspectionDialogState extends State<_ScrutInspectionDialog> {
             // Input Hasil Ukur Piston
             const Text(
               'HASIL UKUR PISTON FISIK (MM)',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textMuted,
+              ),
             ),
             const SizedBox(height: 4),
             TextField(
               controller: _pistonCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
                 hintText: 'Contoh: 62.5 atau 64.0',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
               ),
               onChanged: (val) {
                 setState(() {
@@ -497,7 +568,11 @@ class _ScrutInspectionDialogState extends State<_ScrutInspectionDialog> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                      const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -526,7 +601,11 @@ class _ScrutInspectionDialogState extends State<_ScrutInspectionDialog> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                          const Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -544,7 +623,10 @@ class _ScrutInspectionDialogState extends State<_ScrutInspectionDialog> {
                       Text(
                         'Piston fisik ${_measuredMm!} mm melebihi batas regulasi event ($maxMm mm). '
                         'Sesuai PRD v1.4, toleransi adalah nol.',
-                        style: TextStyle(fontSize: 10, color: Colors.red.shade800),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.red.shade800,
+                        ),
                       ),
                     ],
                   ),
@@ -554,7 +636,11 @@ class _ScrutInspectionDialogState extends State<_ScrutInspectionDialog> {
                 // Kolom Wajib Alasan Diskualifikasi
                 const Text(
                   'ALASAN RESMI DISKUALIFIKASI (WAJIB)',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 TextField(
@@ -563,8 +649,13 @@ class _ScrutInspectionDialogState extends State<_ScrutInspectionDialog> {
                   style: const TextStyle(fontSize: 12),
                   decoration: InputDecoration(
                     hintText: 'Tuliskan alasan resmi, misal: Piston terukur 64.5 mm melebihi batas 63 mm',
-                    hintStyle: const TextStyle(fontSize: 11, color: AppColors.textMuted),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    hintStyle: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     contentPadding: const EdgeInsets.all(10),
                   ),
                   onChanged: (_) => setState(() {}),
@@ -580,23 +671,30 @@ class _ScrutInspectionDialogState extends State<_ScrutInspectionDialog> {
           child: const Text('Batal / Ukur Ulang'),
         ),
         ElevatedButton(
-          onPressed: (_measuredMm == null || (isOverspec && _reasonCtrl.text.trim().isEmpty))
+          onPressed:
+              (_measuredMm == null ||
+                  (isOverspec && _reasonCtrl.text.trim().isEmpty))
               ? null
               : () {
                   Navigator.pop(context);
                   widget.onSubmit(_measuredMm!, _reasonCtrl.text.trim());
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: isOverspec ? Colors.red.shade800 : Colors.green.shade800,
+            backgroundColor: isOverspec
+                ? Colors.red.shade800
+                : Colors.green.shade800,
             disabledBackgroundColor: Colors.grey.shade300,
           ),
           child: Text(
             isOverspec ? 'TETAPKAN DISKUALIFIKASI' : 'LOLOSKAN MOTOR',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
           ),
         ),
       ],
     );
   }
 }
-

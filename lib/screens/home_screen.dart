@@ -10,11 +10,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'leaderboard_screen.dart';
 import 'profile_screen.dart';
 
-// Import Tab Rider Views (Refactor Modular Sesuai Tugas Raihan)
-import 'rider/rider_active_race_view.dart';
-import 'rider/rider_upcoming_events_view.dart';
-import '../services/motorcycle_service.dart';
-import '../models/motorcycle_model.dart';
+// Import Modular Rider Views Sesuai PRD v1.4, ERD v1.4 & Pembagian Tugas
+import 'rider/rider_upcoming_view.dart';
+import 'rider/rider_ongoing_view.dart';
+import 'rider/rider_podium_view.dart';
 
 // Import Layar Pengurus (Admin / Panitia)
 import 'admin/admin_event_screen.dart';
@@ -23,12 +22,17 @@ import 'admin/admin_timing_screen.dart';
 import 'panitia/tab_persetujuan_view.dart';
 import 'panitia/sekretaris_portal_screen.dart';
 
-/// Shell Utama Rider & Portal Komunitas (Milik Raihan / Pembalap)
-/// Sesuai PRD v1.4, ERD v1.4, & Pembagian Tugas v1.4:
-/// - Tab 0: Balapan Saya (Tiket, Nomor Balap Lunas, QR Kehadiran, Status Scrut)
-/// - Tab 1: Event Mendatang (Pendaftaran Balap, Sisa Kuota, Filter Motor Cocok)
-/// - Navigasi Rider: Balapan, Leaderboard/Podium, Garasi Motor, Profil
-/// - Shortcut Menu Pengurus (Admin Portal) bagi role panitia/ketua/wakil/sekretaris/bendahara
+/// Shell Utama Rider & Portal Komunitas DragHub (Milik Raihan / Pembalap)
+/// Sesuai PRD v1.4, ERD v1.4, & Pembagian Tugas GitFlow v1.4:
+/// - Top Navbar (Segmented Bar) HANYA berisi 2 Tab:
+///   * Tab 0: UPCOMING (Kejuaraan mendatang/pendaftaran buka via EventCard Alfa)
+///   * Tab 1: ONGOING (Paddock live, kartu balap rider, nomor resmi #001 & QR kehadiran)
+/// - Garasi Motor Balap dikelola khusus di PROFIL (ProfileScreen), TIDAK ada logic ganda di Home.
+/// - Bottom Navigation Bar:
+///   * Index 0: BALAPAN (Menampilkan Shell dengan Tab UPCOMING & ONGOING)
+///   * Index 1: PODIUM (Menampilkan Podium resmi juara 1-3 saat COMPLETED)
+///   * Index 2: PROFIL (Profil akun & Garasi Motor Balap)
+/// - Floating Button: PORTAL PENGURUS (Khusus role panitia/admin)
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -37,7 +41,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedTabIndex = 0; // 0 = Balapan Saya / Live, 1 = Event Mendatang
+  // Top Navbar: 0 = UPCOMING, 1 = ONGOING
+  int _selectedTopTabIndex = 0;
+
+  // Bottom Navbar: 0 = BALAPAN, 1 = PODIUM, 2 = PROFIL
   int _bottomNavIndex = 0;
 
   String _userRole = 'anggota';
@@ -101,22 +108,24 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
       bottomNavigationBar: _buildBottomNavigationBar(),
+      floatingActionButton: _isAdmin ? _buildAdminFloatingButton() : null,
     );
   }
 
   Widget _buildCurrentBody() {
-    if (_bottomNavIndex == 1) {
-      return const LeaderboardScreen();
-    } else if (_bottomNavIndex == 2 && !_isAdmin) {
-      return _buildGarageBody();
-    } else if (_bottomNavIndex == 3) {
-      return const ProfileScreen();
+    switch (_bottomNavIndex) {
+      case 1:
+        return _buildPodiumShell();
+      case 2:
+        return const ProfileScreen();
+      case 0:
+      default:
+        return _buildRiderRaceShell();
     }
-    return _buildRiderHomeContent();
   }
 
   // ===========================================================================
-  // BERANDA UTAMA RIDER (TAB 0: AKTIF/TIKET & TAB 1: MENDATANG)
+  // SHELL BALAPAN: TOP BAR (UPCOMING & ONGOING)
   // ===========================================================================
 
   Widget _buildHomeContent() {
@@ -128,11 +137,11 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: [
                 _buildTopHeader(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 _buildRiderStatusBadge(),
-                const SizedBox(height: 16),
-                _buildTabSelector(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
+                _buildSegmentedTabSelector(),
+                const SizedBox(height: 14),
               ],
             ),
           ),
@@ -148,6 +157,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // ===========================================================================
+  // HEADER & STATUS BADGE
+  // ===========================================================================
 
   Widget _buildTopHeader() {
     return Row(
@@ -253,7 +266,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTabSelector() {
+  // ===========================================================================
+  // TOP SEGMENTED BAR: HANYA UPCOMING & ONGOING
+  // ===========================================================================
+
+  Widget _buildSegmentedTabSelector() {
     return Container(
       height: 44,
       padding: const EdgeInsets.all(4),
@@ -263,17 +280,21 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildTabButton(0, 'BALAPAN SAYA / LIVE')),
-          Expanded(child: _buildTabButton(1, 'EVENT MENDATANG')),
+          Expanded(child: _buildSegmentButton(0, 'UPCOMING')),
+          Expanded(child: _buildSegmentButton(1, 'ONGOING')),
         ],
       ),
     );
   }
 
-  Widget _buildTabButton(int index, String title) {
-    final isSelected = _selectedTabIndex == index;
+  Widget _buildSegmentButton(int index, String title) {
+    final isSelected = _selectedTopTabIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedTabIndex = index),
+      onTap: () {
+        setState(() {
+          _selectedTopTabIndex = index;
+        });
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
@@ -1201,12 +1222,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ===========================================================================
-  // BOTTOM NAVIGATION BAR
+  // BOTTOM NAVIGATION BAR: BALAPAN, PODIUM, PROFIL
   // ===========================================================================
 
   Widget _buildBottomNavigationBar() {
     return Container(
-      height: 70,
+      height: 68,
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: AppColors.borderLight)),
@@ -1226,16 +1247,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBottomNavItem(int index, IconData icon, String label) {
+  Widget _buildBottomNavItem({
+    required int index,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     final isSelected = _bottomNavIndex == index;
+
     return GestureDetector(
-      onTap: () {
-        if (index == 2 && _isAdmin) {
-          _showAdminFloatingMenu();
-        } else {
-          setState(() => _bottomNavIndex = index);
-        }
-      },
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         color: Colors.transparent,
@@ -1268,14 +1289,36 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ===========================================================================
-  // FLOATING ADMIN MENU UNTUK PERAN PENGURUS
+  // FLOATING BUTTON & MODAL UNTUK ROLE PENGURUS KOMUNITAS
   // ===========================================================================
+
+  Widget _buildAdminFloatingButton() {
+    return FloatingActionButton.extended(
+      onPressed: _showAdminFloatingMenu,
+      backgroundColor: AppColors.primaryMaroon,
+      elevation: 4,
+      icon: const Icon(
+        Icons.admin_panel_settings,
+        color: Colors.white,
+        size: 18,
+      ),
+      label: const Text(
+        'PORTAL PENGURUS',
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.8,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
 
   void _showAdminFloatingMenu() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.3),
+      barrierColor: Colors.black.withValues(alpha: 0.3),
       builder: (context) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
@@ -1427,7 +1470,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     final Color color = isActive
         ? AppColors.primaryMaroon
-        : AppColors.textMuted.withOpacity(0.3);
+        : AppColors.textMuted.withValues(alpha: 0.3);
 
     return GestureDetector(
       onTap: onTap,

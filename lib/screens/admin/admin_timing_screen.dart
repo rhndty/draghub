@@ -38,7 +38,6 @@ class _AdminTimingScreenState extends State<AdminTimingScreen> {
           ],
         ),
       ),
-
     );
   }
 

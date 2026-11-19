@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import '../../models/event_model.dart';
 import '../../models/event_registration_model.dart';
 import '../../services/event_service.dart';
@@ -7,27 +8,25 @@ import '../../services/registration_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/qr_kehadiran_card.dart';
 
-/// Tab Tampilan Balapan Saya & Kartu Paddock Pass (Milik Raihan / Pembalap)
+/// Tab ONGOING / AKTIF (Milik Raihan / Pembalap)
 /// Sesuai PRD v1.4 & ERD v1.4:
-/// - Tiket pendaftaran balap rider
-/// - Status verifikasi bayar: PENDING, REJECTED (bisa upload ulang), PAID (Nomor Balap & QR)
-/// - Status Kehadiran & Scrutineering
-/// - Event yang sedang live di sirkuit (ONGOING)
-class RiderActiveRaceView extends StatefulWidget {
-  final VoidCallback onOpenLeaderboard;
+/// - Event yang sedang live berlangsung di sirkuit (status == 'ONGOING')
+/// - Tiket Balap Rider & Paddock Pass:
+///   * Status PAID: Nomor balap resmi #001 & QR kehadiran paddock (qr_kehadiran_card.dart)
+///   * Status PENDING: Menunggu verifikasi pembayaran oleh Bendahara
+///   * Status REJECTED: Tampilan alasan penolakan & fitur unggah ulang bukti transfer
+class RiderOngoingView extends StatefulWidget {
+  final VoidCallback onOpenPodium;
 
-  const RiderActiveRaceView({
-    super.key,
-    required this.onOpenLeaderboard,
-  });
+  const RiderOngoingView({super.key, required this.onOpenPodium});
 
   @override
-  State<RiderActiveRaceView> createState() => _RiderActiveRaceViewState();
+  State<RiderOngoingView> createState() => _RiderOngoingViewState();
 }
 
-class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
-  final RegistrationService _registrationService = RegistrationService();
+class _RiderOngoingViewState extends State<RiderOngoingView> {
   final EventService _eventService = EventService();
+  final RegistrationService _registrationService = RegistrationService();
   final String? _uid = FirebaseAuth.instance.currentUser?.uid;
 
   @override
@@ -35,7 +34,7 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. LIVE EVENT ONGOING DI SIRKUIT HARI INI
+        // 1. LIVE EVENT SIRKUIT HARI INI (ONGOING)
         StreamBuilder<List<EventModel>>(
           stream: _eventService.getOngoingEventsStream(),
           builder: (context, snapshot) {
@@ -47,29 +46,28 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
             final liveEvent = ongoingEvents.first;
             return Padding(
               padding: const EdgeInsets.only(bottom: 24.0),
-              child: _buildOngoingEventBanner(liveEvent),
+              child: _buildOngoingLiveBanner(liveEvent),
             );
           },
         ),
 
-        // 2. KARTU BALAP & PENDAFTARAN SAYA
+        // 2. KARTU TIKET BALAP SAYA (PADDOCK PASS & NOMOR BALAP)
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: const [
-                Icon(Icons.confirmation_num_outlined, color: AppColors.primaryMaroon, size: 18),
-                SizedBox(width: 8),
-                Text(
-                  'KARTU BALAP & TIKET SAYA',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                    letterSpacing: 1.0,
-                  ),
-                ),
-              ],
+          children: const [
+            Icon(
+              Icons.confirmation_num_outlined,
+              color: AppColors.primaryMaroon,
+              size: 18,
+            ),
+            SizedBox(width: 8),
+            Text(
+              'TIKET BALAP & PADDOCK PASS SAYA',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textDark,
+                letterSpacing: 1.0,
+              ),
             ),
           ],
         ),
@@ -82,7 +80,9 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
               return const Center(
                 child: Padding(
                   padding: EdgeInsets.all(32.0),
-                  child: CircularProgressIndicator(color: AppColors.primaryMaroon),
+                  child: CircularProgressIndicator(
+                    color: AppColors.primaryMaroon,
+                  ),
                 ),
               );
             }
@@ -99,17 +99,29 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
                 ),
                 child: const Column(
                   children: [
-                    Icon(Icons.sports_motorsports_outlined, size: 44, color: AppColors.textMuted),
+                    Icon(
+                      Icons.sports_motorsports_outlined,
+                      size: 44,
+                      color: AppColors.textMuted,
+                    ),
                     SizedBox(height: 12),
                     Text(
-                      'Belum Terdaftar di Balapan',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                      'Belum Ada Tiket Balapan Aktif',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
                     ),
                     SizedBox(height: 6),
                     Text(
-                      'Pilih kejuaraan di tab MENDATANG untuk mendaftar dan mendapatkan nomor balap paddock resmi.',
+                      'Silakan buka tab UPCOMING untuk mendaftarkan motor balap Anda ke kejuaraan resmi.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted, height: 1.4),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
@@ -119,8 +131,8 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
             return Column(
               children: myRegistrations.map((reg) {
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: _buildRegistrationItem(reg),
+                  padding: const EdgeInsets.only(bottom: 18.0),
+                  child: _buildRegistrationCard(reg),
                 );
               }).toList(),
             );
@@ -132,12 +144,12 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
     );
   }
 
-  Widget _buildRegistrationItem(EventRegistrationModel reg) {
+  Widget _buildRegistrationCard(EventRegistrationModel reg) {
     if (reg.paymentStatus == PaymentStatus.paid) {
-      // Pembayaran Lunas -> Tampilkan Kartu Balap Resmi & QR Code
+      // Pembayaran Lunas -> Tampilkan Kartu Balap Resmi & QR Code Kehadiran (PRD 4.4 & 4.5)
       return QrKehadiranCard(registration: reg);
     } else if (reg.paymentStatus == PaymentStatus.rejected) {
-      // Pembayaran Ditolak -> Tampilkan Alasan & Tombol Unggah Ulang
+      // Pembayaran Ditolak -> Tampilkan Alasan & Tombol Unggah Ulang Bukti Bayar (PRD 4.3)
       return _buildRejectedPaymentCard(reg);
     } else {
       // Pembayaran Masih PENDING Verifikasi Bendahara
@@ -151,11 +163,11 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.amber.shade300),
+        border: Border.all(color: Colors.amber.shade300, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.amber.withOpacity(0.08),
-            blurRadius: 10,
+            color: Colors.amber.withValues(alpha: 0.08),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -167,7 +179,10 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade50,
                   borderRadius: BorderRadius.circular(6),
@@ -175,7 +190,11 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.hourglass_top, size: 12, color: Colors.amber.shade900),
+                    Icon(
+                      Icons.hourglass_top,
+                      size: 12,
+                      color: Colors.amber.shade900,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'MENUNGGU VERIFIKASI BENDAHARA',
@@ -191,26 +210,38 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
               ),
               Text(
                 reg.vehicleType,
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             reg.bikeName,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textDark),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textDark,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Piston: ${reg.pistonDiameterMm.toStringAsFixed(1)}mm • Rider: ${reg.riderName}',
+            'Piston: ${reg.pistonDiameterMm.toStringAsFixed(1)} mm • Rider: ${reg.riderName}',
             style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
           ),
           const SizedBox(height: 12),
           const Divider(height: 1, color: AppColors.borderLight),
           const SizedBox(height: 12),
           const Text(
-            'Bukti transfer pendaftaran Anda sedang ditinjau oleh Bendahara (Dika). Nomor balap resmi dan QR Kehadiran akan diterbitkan secara otomatis setelah status pembayaran disetujui.',
-            style: TextStyle(fontSize: 11, color: AppColors.textMuted, height: 1.4),
+            'Bukti transfer pendaftaran Anda sedang ditinjau oleh Bendahara (Dika). Nomor balap resmi (#001 dst) dan QR Kehadiran akan terbit secara otomatis setelah pembayaran disahkan.',
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.textMuted,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -223,7 +254,7 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
       decoration: BoxDecoration(
         color: const Color(0xFFFDF2F2),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.red.shade300),
+        border: Border.all(color: Colors.red.shade300, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,7 +263,10 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.red.shade100,
                   borderRadius: BorderRadius.circular(6),
@@ -242,7 +276,7 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
                     Icon(Icons.cancel, size: 12, color: Colors.red.shade800),
                     const SizedBox(width: 4),
                     Text(
-                      'BUKTI TRANSFER DITOLAK',
+                      'BUKTI PEMBAYARAN DITOLAK',
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
@@ -255,19 +289,31 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
               ),
               Text(
                 reg.vehicleType,
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             reg.bikeName,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textDark),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textDark,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Alasan Penolakan: ${reg.paymentRejectionReason ?? "Struk bukti transfer tidak valid atau tidak terbaca"}',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red.shade900),
+            'Alasan Penolakan: ${reg.paymentRejectionReason ?? "Struk transfer tidak valid atau foto buram"}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.red.shade900,
+            ),
           ),
           const SizedBox(height: 14),
           SizedBox(
@@ -277,12 +323,23 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
               onPressed: () => _showReuploadDialog(reg),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryMaroon,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-              icon: const Icon(Icons.upload_file, size: 16, color: Colors.white),
+              icon: const Icon(
+                Icons.cloud_upload_outlined,
+                size: 16,
+                color: Colors.white,
+              ),
               label: const Text(
                 'UNGGAH ULANG BUKTI BAYAR',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: Colors.white),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -299,24 +356,39 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('UNGGAH ULANG BUKTI BAYAR', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'UNGGAH ULANG BUKTI BAYAR',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Masukkan URL foto struk transfer baru untuk diverifikasi ulang oleh Bendahara:',
-                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                'Masukkan tautan URL foto struk transfer baru untuk diverifikasi ulang oleh Bendahara (Dika):',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
-                style: const TextStyle(fontSize: 12),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
                 decoration: const InputDecoration(
                   hintText: 'https://...',
                   border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
               ),
             ],
@@ -324,7 +396,10 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('BATAL', style: TextStyle(color: AppColors.textMuted)),
+              child: const Text(
+                'BATAL',
+                style: TextStyle(color: AppColors.textMuted),
+              ),
             ),
             ElevatedButton(
               onPressed: isSaving
@@ -341,7 +416,9 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
                           Navigator.pop(ctx);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Bukti transfer berhasil diperbarui! Menunggu verifikasi.'),
+                              content: Text(
+                                'Bukti transfer berhasil dikirim ulang! Menunggu verifikasi.',
+                              ),
                               backgroundColor: Colors.green,
                               behavior: SnackBarBehavior.floating,
                             ),
@@ -350,14 +427,33 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
                       } catch (e) {
                         setDialogState(() => isSaving = false);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Gagal: $e'), backgroundColor: Colors.red),
+                          SnackBar(
+                            content: Text('Gagal: $e'),
+                            backgroundColor: Colors.red,
+                          ),
                         );
                       }
                     },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryMaroon),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryMaroon,
+              ),
               child: isSaving
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('KIRIM ULANG', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'KIRIM ULANG',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -365,7 +461,7 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
     );
   }
 
-  Widget _buildOngoingEventBanner(EventModel event) {
+  Widget _buildOngoingLiveBanner(EventModel event) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -373,7 +469,7 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
         border: Border.all(color: AppColors.borderLight),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryMaroon.withOpacity(0.12),
+            color: AppColors.primaryMaroon.withValues(alpha: 0.12),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -385,28 +481,31 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
                 child: Image.network(
-                  event.imageUrl.isNotEmpty
-                      ? event.imageUrl
-                      : 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=600&auto=format&fit=crop',
+                  event.imageUrl.isNotEmpty ? event.imageUrl : 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=600&auto=format&fit=crop',
                   height: 180,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 180,
-                    color: Colors.grey.shade300,
-                  ),
+                  errorBuilder: (context, error, stackTrace) =>
+                      Container(height: 180, color: Colors.grey.shade300),
                 ),
               ),
               Container(
                 height: 180,
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.9),
+                    ],
                   ),
                 ),
               ),
@@ -414,7 +513,10 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
                 top: 14,
                 left: 14,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red.shade700,
                     borderRadius: BorderRadius.circular(20),
@@ -471,15 +573,21 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton.icon(
-                onPressed: widget.onOpenLeaderboard,
+                onPressed: widget.onOpenPodium,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryMaroon,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   elevation: 0,
                 ),
-                icon: const Icon(Icons.leaderboard, size: 18, color: Colors.white),
+                icon: const Icon(
+                  Icons.emoji_events,
+                  size: 18,
+                  color: Colors.white,
+                ),
                 label: const Text(
-                  'LIHAT PAPAN KLASEMEN / HASIL',
+                  'LIHAT PODIUM KEJUARAAN',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -495,4 +603,3 @@ class _RiderActiveRaceViewState extends State<RiderActiveRaceView> {
     );
   }
 }
-
