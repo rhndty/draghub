@@ -12,6 +12,7 @@ import 'admin/admin_financial_screen.dart';
 import 'admin/admin_timing_screen.dart';
 import 'panitia/tab_persetujuan_view.dart';
 import 'panitia/sekretaris_portal_screen.dart';
+import 'panitia/bendahara_portal_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -775,11 +776,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   _buildAdminMenuIcon(
                     icon: Icons.request_quote_outlined, 
                     label: 'FINANSIAL', 
-                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR' || _userRole == 'bendahara' || _userRole == 'ketua', 
+                    isActive: _userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR' || _userRole == 'bendahara' || _userRole == 'ketua' || _userRole == 'wakil' || _userRole == 'sekretaris', 
                     onTap: () {
-                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR' || _userRole == 'bendahara' || _userRole == 'ketua')) return; 
+                      if (!(_userRole == 'SUPER_ADMIN' || _userRole == 'VERIFIKATOR' || _userRole == 'bendahara' || _userRole == 'ketua' || _userRole == 'wakil' || _userRole == 'sekretaris')) return; 
                       Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => const AdminFinancialScreen()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const BendaharaPortalScreen()));
                     }
                   ),
                   _buildAdminMenuIcon(

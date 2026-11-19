@@ -1,181 +1,117 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
+
+    // --- HELPER FUNCTIONS ---
+    function isSignedIn() {
       return request.auth != null;
     }
 
     function isOwner(userId) {
-      return signedIn() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    function role() {
-      return get(
-        /databases/$(database)/documents/users/$(request.auth.uid)
-      ).data.role;
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    function isStaff() {
-      return signedIn()
-        && role() in ['ketua', 'wakil', 'sekretaris', 'bendahara'];
+    function hasRole(roles) {
+      return isSignedIn() && getUserRole() in roles;
     }
 
-    function isManager() {
-      return signedIn() && role() in ['ketua', 'wakil'];
+    function isPanitia() {
+      return hasRole(['bendahara', 'ketua', 'wakil', 'sekretaris', 'super_admin']);
     }
 
-    match /users/{userId} {
-      allow create: if isOwner(userId)
-        && request.resource.data.keys().hasOnly([
-          'uid', 'email', 'fullName', 'phoneNumber', 'role', 'createdAt'
-        ])
-        && request.resource.data.uid == userId
-        && request.resource.data.email is string
-        && request.resource.data.fullName is string
-        && request.resource.data.phoneNumber is string
-        && request.resource.data.role == 'anggota'
-        && request.resource.data.createdAt == request.time;
-
-      allow read: if isOwner(userId) || isStaff();
-      allow update: if isOwner(userId)
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['fullName', 'phoneNumber'])
-        && request.resource.data.uid == resource.data.uid
-        && request.resource.data.role == resource.data.role;
+    // 1. KOLEKSI USERS
+    // Akun baru wajib ber-role 'anggota' dan client dilarang mengubah field 'role'
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(uid)
+                    && request.resource.data.uid == uid
+                    && request.resource.data.role == 'anggota';
+      allow update: if isOwner(uid)
+                    && request.resource.data.role == resource.data.role;
       allow delete: if false;
     }
 
+    // 2. KOLEKSI MOTORCYCLES (Garasi Motor Pembalap)
     match /motorcycles/{bikeId} {
-      allow read: if isOwner(resource.data.userId) || isStaff();
-      allow create: if signedIn()
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.keys().hasOnly([
-          'bikeId', 'userId', 'brand', 'modelName', 'vehicleType',
-          'pistonDiameterMm', 'createdAt'
-        ])
-        && request.resource.data.bikeId == bikeId
-        && request.resource.data.brand
-          in ['Honda', 'Yamaha', 'Suzuki', 'Vespa', 'Kawasaki']
-        && request.resource.data.modelName is string
-        && request.resource.data.vehicleType in ['MATIC', 'KOPLING']
-        && request.resource.data.pistonDiameterMm is number
-        && request.resource.data.pistonDiameterMm > 0
-        && request.resource.data.createdAt == request.time;
-      allow update: if isOwner(resource.data.userId)
-        && request.resource.data.userId == resource.data.userId
-        && request.resource.data.bikeId == resource.data.bikeId
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly([
-            'brand', 'modelName', 'vehicleType', 'pistonDiameterMm'
-          ])
-        && request.resource.data.brand
-          in ['Honda', 'Yamaha', 'Suzuki', 'Vespa', 'Kawasaki']
-        && request.resource.data.modelName is string
-        && request.resource.data.vehicleType in ['MATIC', 'KOPLING']
-        && request.resource.data.pistonDiameterMm is number
-        && request.resource.data.pistonDiameterMm > 0;
-      allow delete: if isOwner(resource.data.userId);
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn()
+                            && resource.data.userId == request.auth.uid;
     }
 
+    // 3. KOLEKSI EVENTS
     match /events/{eventId} {
-      allow read: if signedIn();
-      allow create: if signedIn()
-        && role() in ['ketua', 'wakil', 'sekretaris']
-        && request.resource.data.keys().hasAll([
-          'eventId', 'title', 'location', 'eventDate', 'imageUrl',
-          'className', 'vehicleType', 'maxPistonDiameterMm',
-          'bracketSeconds', 'registrationFee', 'quota', 'registeredCount',
-          'status', 'createdBy', 'createdAt'
-        ])
-        && request.resource.data.keys().hasOnly([
-          'eventId', 'title', 'location', 'eventDate', 'imageUrl',
-          'className', 'vehicleType', 'maxPistonDiameterMm',
-          'bracketSeconds', 'registrationFee', 'quota', 'registeredCount',
-          'status', 'createdBy', 'createdAt'
-        ])
-        && request.resource.data.eventId == eventId
-        && request.resource.data.title is string
-        && request.resource.data.location is string
-        && request.resource.data.eventDate is timestamp
-        && request.resource.data.imageUrl is string
-        && request.resource.data.className is string
-        && request.resource.data.vehicleType in ['MATIC', 'KOPLING']
-        && request.resource.data.maxPistonDiameterMm is number
-        && request.resource.data.maxPistonDiameterMm > 0
-        && request.resource.data.bracketSeconds is number
-        && request.resource.data.bracketSeconds > 0
-        && request.resource.data.registrationFee is number
-        && request.resource.data.registrationFee >= 0
-        && request.resource.data.quota is int
-        && request.resource.data.quota > 0
-        && request.resource.data.registeredCount is int
-        && request.resource.data.registeredCount == 0
-        && request.resource.data.status == 'DRAFT'
-        && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.createdAt == request.time;
-      allow update: if (
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly([
-              'title', 'location', 'eventDate', 'imageUrl', 'className',
-              'vehicleType', 'maxPistonDiameterMm', 'bracketSeconds',
-              'registrationFee', 'quota'
-            ])
-          && resource.data.status == 'DRAFT'
-          && request.resource.data.status == 'DRAFT'
-          && (
-            (role() == 'sekretaris'
-              && resource.data.createdBy == request.auth.uid)
-            || isManager()
-          )
-        ) || (
-          isManager()
-          && resource.data.status == 'DRAFT'
-          && request.resource.data.status == 'PUBLISHED'
-          && request.resource.data.approvedBy == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['status', 'approvedBy'])
-        ) || (
-          isManager()
-          && resource.data.status == 'DRAFT'
-          && request.resource.data.status == 'REJECTED'
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['status'])
-        ) || (
-          isManager()
-          && resource.data.status == 'PUBLISHED'
-          && request.resource.data.status == 'ONGOING'
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['status'])
-        ) || (
-          isManager()
-          && resource.data.status == 'ONGOING'
-          && request.resource.data.status == 'COMPLETED'
-          && request.resource.data.completedAt == request.time
-          && request.resource.data.podium is list
-          && request.resource.data.podium.size() <= 3
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['status', 'podium', 'completedAt'])
-        );
+      allow read: if isSignedIn();
+      // Seluruh Panitia (Sekretaris, Ketua, Wakil, Bendahara) diizinkan membuat event
+      allow create: if isPanitia();
+      // Update diizinkan untuk panitia pengelola atau penambahan counter nomor balap saat pelunasan
+      allow update: if isPanitia()
+                    || (isSignedIn() && (resource.data.status in ['PUBLISHED', 'UPCOMING', 'DRAFT']));
+      allow delete: if hasRole(['ketua', 'wakil']);
+    }
+
+    // 4. KOLEKSI EVENT_REGISTRATIONS
+    match /event_registrations/{registrationId} {
+      allow read: if isSignedIn();
+
+      // Rider mendaftar event (atau Panitia membuat pendaftaran testing / on-behalf)
+      allow create: if isSignedIn()
+                    && (
+                      (request.resource.data.userId == request.auth.uid
+                        && request.resource.data.paymentStatus == 'PENDING'
+                        && request.resource.data.assignedStartNumber == null
+                        && request.resource.data.attendanceStatus == 'PENDING'
+                        && request.resource.data.scrutineeringStatus == 'PENDING')
+                      || isPanitia()
+                    );
+
+      // Update berdasarkan peran sesuai RBAC PRD v1.4:
+      allow update: if
+        // A. Rider mengunggah ulang bukti bayar setelah ditolak (REJECTED -> PENDING)
+        (isSignedIn()
+          && resource.data.userId == request.auth.uid
+          && resource.data.paymentStatus == 'REJECTED'
+          && request.resource.data.paymentStatus == 'PENDING'
+          && request.resource.data.assignedStartNumber == null)
+        // B. Pelunasan otomatis via Midtrans Sandbox oleh rider bersangkutan
+        || (isOwner(resource.data.userId)
+          && resource.data.paymentStatus == 'PENDING'
+          && request.resource.data.paymentStatus == 'PAID')
+        // C. Bendahara memverifikasi atau menolak pembayaran manual
+        || hasRole(['bendahara'])
+        // D. Sekretaris memverifikasi kehadiran & scrut awal (tidak bisa mengubah yang sudah DISQUALIFIED)
+        || (hasRole(['sekretaris'])
+          && resource.data.scrutineeringStatus != 'DISQUALIFIED')
+        // E. Ketua & Wakil memiliki akses penuh (termasuk scrut ulang atas keberatan rider)
+        || hasRole(['ketua', 'wakil']);
+
       allow delete: if false;
     }
 
-    match /event_registrations/{registrationId} {
-      allow read: if signedIn()
-        && (resource.data.userId == request.auth.uid || isStaff());
-      allow write: if false;
-    }
-
+    // 5. KOLEKSI RACE_RESULTS (Telemetri Waktu Balap)
     match /race_results/{resultId} {
-      allow read: if isStaff();
-      allow write: if false;
+      allow read: if isSignedIn();
+      allow create, update: if hasRole(['wakil', 'ketua']);
+      allow delete: if false;
     }
 
+    // 6. KOLEKSI KAS_TRANSACTIONS
     match /kas_transactions/{transactionId} {
-      allow read: if signedIn()
-        && role() in ['ketua', 'wakil', 'bendahara'];
-      allow write: if false;
+      // Hanya Panitia yang bisa melihat riwayat kas, anggota TIDAK BISA
+      allow read: if isPanitia();
+
+      // Pencatatan kas masuk/keluar oleh Bendahara atau otomatis dari payment gateway Midtrans
+      allow create: if hasRole(['bendahara'])
+                    || (isSignedIn() && request.resource.data.paymentMethod != null);
+      allow update: if hasRole(['bendahara']);
+
+      // Bendahara (dan Ketua/Wakil) diizinkan menghapus transaksi jika terjadi kesalahan input
+      allow delete: if hasRole(['bendahara', 'ketua', 'wakil']);
     }
   }
 }
