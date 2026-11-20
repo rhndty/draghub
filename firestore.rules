@@ -24,7 +24,6 @@ service cloud.firestore {
     }
 
     // 1. KOLEKSI USERS
-    // Akun baru wajib ber-role 'anggota' dan client dilarang mengubah field 'role'
     match /users/{uid} {
       allow read: if isSignedIn();
       allow create: if isOwner(uid)
@@ -35,7 +34,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // 2. KOLEKSI MOTORCYCLES (Garasi Motor Pembalap)
+    // 2. KOLEKSI MOTORCYCLES
     match /motorcycles/{bikeId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
@@ -44,22 +43,26 @@ service cloud.firestore {
                             && resource.data.userId == request.auth.uid;
     }
 
-    // 3. KOLEKSI EVENTS
+    // 3. KOLEKSI EVENTS (Aman dari manipulasi rider)
     match /events/{eventId} {
       allow read: if isSignedIn();
-      // Seluruh Panitia (Sekretaris, Ketua, Wakil, Bendahara) diizinkan membuat event
-      allow create: if isPanitia();
-      // Update diizinkan untuk panitia pengelola atau penambahan counter nomor balap saat pelunasan
+      // Sekretaris, Ketua, dan Wakil diizinkan membuat draft event baru
+      allow create: if isPanitia() || hasRole(['sekretaris', 'ketua', 'wakil']);
+      // Panitia bisa update status; Pembalap hanya boleh menaikkan counter saat pelunasan
       allow update: if isPanitia()
-                    || (isSignedIn() && (resource.data.status in ['PUBLISHED', 'UPCOMING', 'DRAFT']));
+                    || (isSignedIn() 
+                        && resource.data.status == 'PUBLISHED'
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['registeredCount'])
+                        && request.resource.data.registeredCount == resource.data.registeredCount + 1);
       allow delete: if hasRole(['ketua', 'wakil']);
     }
+    
 
     // 4. KOLEKSI EVENT_REGISTRATIONS
     match /event_registrations/{registrationId} {
       allow read: if isSignedIn();
 
-      // Rider mendaftar event (atau Panitia membuat pendaftaran testing / on-behalf)
+      // Rider mendaftar event (atau Panitia mendaftarkan on-behalf)
       allow create: if isSignedIn()
                     && (
                       (request.resource.data.userId == request.auth.uid
@@ -70,24 +73,24 @@ service cloud.firestore {
                       || isPanitia()
                     );
 
-      // Update berdasarkan peran sesuai RBAC PRD v1.4:
+      // Update RBAC PRD v1.4
       allow update: if
-        // A. Rider mengunggah ulang bukti bayar setelah ditolak (REJECTED -> PENDING)
+        // A. Rider upload ulang bukti bayar jika ditolak
         (isSignedIn()
           && resource.data.userId == request.auth.uid
           && resource.data.paymentStatus == 'REJECTED'
           && request.resource.data.paymentStatus == 'PENDING'
           && request.resource.data.assignedStartNumber == null)
-        // B. Pelunasan otomatis via Midtrans Sandbox oleh rider bersangkutan
+        // B. Pelunasan otomatis Midtrans oleh rider pemilik pendaftaran
         || (isOwner(resource.data.userId)
           && resource.data.paymentStatus == 'PENDING'
           && request.resource.data.paymentStatus == 'PAID')
-        // C. Bendahara memverifikasi atau menolak pembayaran manual
+        // C. Bendahara memverifikasi atau menolak transfer manual
         || hasRole(['bendahara'])
-        // D. Sekretaris memverifikasi kehadiran & scrut awal (tidak bisa mengubah yang sudah DISQUALIFIED)
+        // D. Sekretaris verifikasi kehadiran & meja scrut fisik
         || (hasRole(['sekretaris'])
           && resource.data.scrutineeringStatus != 'DISQUALIFIED')
-        // E. Ketua & Wakil memiliki akses penuh (termasuk scrut ulang atas keberatan rider)
+        // E. Ketua & Wakil (Akses penuh & scrut ulang)
         || hasRole(['ketua', 'wakil']);
 
       allow delete: if false;
@@ -102,15 +105,11 @@ service cloud.firestore {
 
     // 6. KOLEKSI KAS_TRANSACTIONS
     match /kas_transactions/{transactionId} {
-      // Hanya Panitia yang bisa melihat riwayat kas, anggota TIDAK BISA
       allow read: if isPanitia();
-
-      // Pencatatan kas masuk/keluar oleh Bendahara atau otomatis dari payment gateway Midtrans
+      // Bendahara manual atau sistem otomatis saat rider melunasi pendaftaran
       allow create: if hasRole(['bendahara'])
-                    || (isSignedIn() && request.resource.data.paymentMethod != null);
+                    || (isSignedIn() && request.resource.data.type == 'IN');
       allow update: if hasRole(['bendahara']);
-
-      // Bendahara (dan Ketua/Wakil) diizinkan menghapus transaksi jika terjadi kesalahan input
       allow delete: if hasRole(['bendahara', 'ketua', 'wakil']);
     }
   }

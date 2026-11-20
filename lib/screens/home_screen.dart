@@ -11,8 +11,6 @@ import 'rider/rider_ongoing_view.dart';
 import 'rider/rider_podium_view.dart';
 
 // Import Layar Pengurus (Admin / Panitia)
-import 'admin/admin_event_screen.dart';
-import 'admin/admin_financial_screen.dart';
 import 'admin/admin_timing_screen.dart';
 import 'panitia/tab_persetujuan_view.dart';
 import 'panitia/sekretaris_portal_screen.dart';
@@ -530,19 +528,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildAdminMenuIcon(
-                    icon: Icons.view_sidebar_outlined,
+                    icon: Icons.event_note_outlined,
                     label: 'EVENT',
                     isActive: _userRole == 'SUPER_ADMIN' ||
-                        _userRole == 'RACE_DIRECTOR' ||
+                        _userRole == 'sekretaris' ||
                         _userRole == 'ketua' ||
-                        _userRole == 'wakil' ||
-                        _userRole == 'sekretaris',
+                        _userRole == 'wakil',
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const AdminEventScreen(),
+                          builder: (context) => const SekretarisPortalScreen(),
                         ),
                       );
                     },
@@ -586,23 +583,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const AdminTimingScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildAdminMenuIcon(
-                    icon: Icons.assignment_turned_in_outlined,
-                    label: 'SEKRETARIS',
-                    isActive: _userRole == 'SUPER_ADMIN' ||
-                        _userRole == 'sekretaris' ||
-                        _userRole == 'ketua' ||
-                        _userRole == 'wakil',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SekretarisPortalScreen(),
                         ),
                       );
                     },

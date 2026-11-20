@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/event_model.dart';
@@ -65,15 +66,24 @@ class EventService {
 
   /// Mendengarkan stream semua event atau berdasarkan status tertentu
   Stream<List<EventModel>> getEventsStream({String? status}) {
-    Query<Map<String, dynamic>> query =
-        _eventsCollection.orderBy('eventDate', descending: false);
+    Query<Map<String, dynamic>> query = _eventsCollection;
 
-    if (status != null && status.isNotEmpty) {
+    if (status != null && status.isNotEmpty && status.toUpperCase() != 'ALL') {
       query = query.where('status', isEqualTo: status.toUpperCase());
     }
 
     return query.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => EventModel.fromFirestore(doc)).toList();
+      final events = snapshot.docs.map((doc) {
+        try {
+          return EventModel.fromFirestore(doc);
+        } catch (e) {
+          debugPrint('Error parsing event doc ${doc.id}: $e');
+          return null;
+        }
+      }).whereType<EventModel>().toList();
+
+      events.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+      return events;
     });
   }
 
@@ -81,10 +91,19 @@ class EventService {
   Stream<List<EventModel>> getPublishedEventsStream() {
     return _eventsCollection
         .where('status', isEqualTo: 'PUBLISHED')
-        .orderBy('eventDate', descending: false)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => EventModel.fromFirestore(doc)).toList();
+      final events = snapshot.docs.map((doc) {
+        try {
+          return EventModel.fromFirestore(doc);
+        } catch (e) {
+          debugPrint('Error parsing published event ${doc.id}: $e');
+          return null;
+        }
+      }).whereType<EventModel>().toList();
+
+      events.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+      return events;
     });
   }
 
@@ -94,7 +113,17 @@ class EventService {
         .where('status', isEqualTo: 'ONGOING')
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => EventModel.fromFirestore(doc)).toList();
+      final events = snapshot.docs.map((doc) {
+        try {
+          return EventModel.fromFirestore(doc);
+        } catch (e) {
+          debugPrint('Error parsing ongoing event ${doc.id}: $e');
+          return null;
+        }
+      }).whereType<EventModel>().toList();
+
+      events.sort((a, b) => a.eventDate.compareTo(b.eventDate));
+      return events;
     });
   }
 

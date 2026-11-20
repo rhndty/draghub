@@ -216,7 +216,7 @@ class _TabPembayaranViewState extends State<TabPembayaranView> {
     final eventId = reg['eventId'] ?? '';
     final riderName = reg['riderName'] ?? 'Pembalap';
     final eventTitle = reg['eventTitle'] ?? 'Event Balap DragHub';
-    final amount = (reg['registrationFee'] as num?)?.toInt() ?? 350000;
+    final amount = (reg['registrationFee'] as num?)?.toInt() ?? 250000;
 
     showModalBottomSheet(
       context: context,
@@ -254,7 +254,7 @@ class _TabPembayaranViewState extends State<TabPembayaranView> {
 
       String eventId = '';
       String eventTitle = 'Kejuaraan DragHub Seri 01';
-      int fee = 350000;
+      int fee = 250000;
 
       if (eventsSnap.docs.isNotEmpty) {
         final ev = eventsSnap.docs.first;

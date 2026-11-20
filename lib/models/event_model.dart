@@ -85,9 +85,13 @@ class EventModel {
 
     List<Map<String, dynamic>>? parsePodium(dynamic list) {
       if (list is List) {
-        return list
-            .map((item) => Map<String, dynamic>.from(item as Map))
-            .toList();
+        final result = <Map<String, dynamic>>[];
+        for (final item in list) {
+          if (item is Map) {
+            result.add(Map<String, dynamic>.from(item));
+          }
+        }
+        return result;
       }
       return null;
     }
