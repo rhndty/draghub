@@ -146,8 +146,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   // --- 3. KARTU INFORMASI PEMBALAP SAAT INI ---
   Widget _buildCurrentRiderCard() {
+
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
+      stream: currentUserId.isEmpty
+          ? const Stream.empty()
+          : FirebaseFirestore.instance
           .collection('users')
           .doc(currentUserId)
           .snapshots(),
@@ -325,7 +328,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   // --- 5. DAFTAR KLASEMEN PODIUM (P1, P2, P3) ---
   Widget _buildPodiumStandingList() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
+      stream: currentUserId.isEmpty
+          ? const Stream.empty()
+          : FirebaseFirestore.instance
           .collection('race_results')
           .orderBy('totalTime', descending: false)
           .limit(3)
