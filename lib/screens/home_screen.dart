@@ -11,7 +11,7 @@ import 'rider/rider_ongoing_view.dart';
 import 'rider/rider_podium_view.dart';
 
 // Import Layar Pengurus (Admin / Panitia)
-import 'admin/admin_timing_screen.dart';
+import 'admin/admin_telementry_screeen.dart';
 import 'panitia/tab_persetujuan_view.dart';
 import 'panitia/sekretaris_portal_screen.dart';
 import 'panitia/bendahara_portal_screen.dart';
@@ -582,7 +582,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const AdminTimingScreen(),
+                          builder: (context) => const AdminTelementryScreen(),
                         ),
                       );
                     },
