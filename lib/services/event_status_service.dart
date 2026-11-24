@@ -4,11 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 
 class EventStatusService {
-  EventStatusService({
-    FirebaseAuth? auth,
-    FirebaseFirestore? firestore,
-  })  : _auth = auth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+  EventStatusService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+    : _auth = auth ?? FirebaseAuth.instance,
+      _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -51,6 +49,7 @@ class EventStatusService {
       update: {
         'status': 'COMPLETED',
         'podium': podium,
+        'podiumCalculatedAt': FieldValue.serverTimestamp(),
         'completedAt': FieldValue.serverTimestamp(),
       },
     );

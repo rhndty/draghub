@@ -10,7 +10,7 @@ class PodiumService {
   final FirebaseFirestore _firestore;
 
   PodiumService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _eventsCollection =>
       _firestore.collection('events');
@@ -28,7 +28,14 @@ class PodiumService {
   /// 2. Jika sama, reactionTime terkecil.
   ///
   /// BREAKOUT, JUMP_START, dan DNF otomatis tidak ikut.
-  Future<List<Map<String, dynamic>>> calculatePodium(String eventId) async {
+  ///
+  /// Normalnya dipanggil saat event masih `ONGOING` (sebelum "Akhiri Event").
+  /// Set `allowCompleted: true` hanya untuk menghitung ulang snapshot podium
+  /// pada event yang sudah `COMPLETED` (mis. perbaikan data lama).
+  Future<List<Map<String, dynamic>>> calculatePodium(
+    String eventId, {
+    bool allowCompleted = false,
+  }) async {
     final eventSnapshot = await _eventsCollection.doc(eventId).get();
 
     if (!eventSnapshot.exists) {
@@ -36,7 +43,10 @@ class PodiumService {
     }
 
     final eventData = eventSnapshot.data()!;
-    if (eventData['status'] != 'ONGOING') {
+    final status = eventData['status']?.toString().toUpperCase();
+    final canCalculate =
+        status == 'ONGOING' || (allowCompleted && status == 'COMPLETED');
+    if (!canCalculate) {
       throw StateError(
         'Podium hanya dapat dihitung saat event berstatus ONGOING.',
       );
@@ -96,9 +106,13 @@ class PodiumService {
   /// Method ini tidak mengubah status event. Setelah method ini selesai,
   /// caller dapat meneruskan snapshot ke EventStatusService.completeEvent().
   Future<List<Map<String, dynamic>>> calculateAndSavePodium(
-    String eventId,
-  ) async {
-    final podium = await calculatePodium(eventId);
+    String eventId, {
+    bool allowCompleted = false,
+  }) async {
+    final podium = await calculatePodium(
+      eventId,
+      allowCompleted: allowCompleted,
+    );
 
     await _eventsCollection.doc(eventId).update({
       'podium': podium,

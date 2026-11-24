@@ -224,7 +224,9 @@ class _TabTelemetriViewState extends State<TabTelemetriView> {
                     trailing: event.status == 'ONGOING'
                         ? IconButton(
                             icon: const Icon(Icons.edit_outlined, size: 18),
-                            onPressed: () => _editResult(event, result),
+                            onPressed: registration == null
+                                ? null
+                                : () => _editResult(event, result, registration),
                           )
                         : null,
                   );
@@ -237,108 +239,100 @@ class _TabTelemetriViewState extends State<TabTelemetriView> {
     );
   }
 
-  void _openInput(EventModel event, {RaceResultModel? existing, RaceResultStatus? specialStatus}) {
-    final rider = _selectedRider;
-    if (rider == null) {
+  /// Membuka dialog input waktu. Controller milik dialog di-dispose oleh
+  /// widget dialog itu sendiri, dan penyimpanan baru dijalankan setelah
+  /// dialog benar-benar tertutup.
+  Future<void> _openInput(
+    EventModel event, {
+    RaceResultModel? existing,
+    RaceResultStatus? specialStatus,
+    EventRegistrationModel? rider,
+  }) async {
+    if (_processing) return;
+
+    final selectedRider = rider ?? _selectedRider;
+    if (selectedRider == null) {
       _message('Pilih peserta terlebih dahulu.', error: true);
       return;
     }
-    _showTimingDialog(event, rider, existing: existing, specialStatus: specialStatus);
+
+    final input = await showDialog<_TimingInput>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _TimingInputDialog(
+        event: event,
+        rider: selectedRider,
+        existing: existing,
+        specialStatus: specialStatus,
+      ),
+    );
+
+    if (input == null || !mounted) return;
+    await _save(event, selectedRider, input, specialStatus);
   }
 
-  void _editResult(EventModel event, RaceResultModel result) {
-    _showTimingDialog(event, _selectedRider ?? EventRegistrationModel(
-      registrationId: result.registrationId, eventId: event.eventId, userId: '', bikeId: '',
-      riderName: result.registrationId, bikeName: '', vehicleType: '', pistonDiameterMm: 0,
-      paymentProofUrl: '', paymentStatus: PaymentStatus.paid,
-      attendanceStatus: AttendanceStatus.present,
-      scrutineeringStatus: ScrutineeringStatus.passed, registeredAt: DateTime.now(),
-    ), existing: result);
+  Future<void> _openInputForSelectedEvent({
+    RaceResultStatus? specialStatus,
+  }) async {
+    if (_processing) return;
+
+    final eventId = _selectedEventId;
+    if (eventId == null) return;
+
+    final event = await _eventService.getEventById(eventId);
+    if (!mounted) return;
+    if (event == null) {
+      _message('Event tidak ditemukan. Muat ulang halaman.', error: true);
+      return;
+    }
+    await _openInput(event, specialStatus: specialStatus);
   }
 
-  Future<void> _showTimingDialog(EventModel event, EventRegistrationModel rider,
-      {RaceResultModel? existing, RaceResultStatus? specialStatus}) async {
-    final lane = ValueNotifier<int>(existing?.lane ?? 1);
-    final rt = TextEditingController(text: existing == null ? '' : existing.reactionTime.toString());
-    final et = TextEditingController(text: existing == null ? '' : existing.elapsedTime.toString());
-    final formKey = GlobalKey<FormState>();
-    final isSpecial = specialStatus != null;
-    await showDialog(context: context, barrierDismissible: false, builder: (ctx) {
-      return StatefulBuilder(builder: (ctx, setDialogState) {
-        final reaction = double.tryParse(rt.text) ?? 0;
-        final elapsed = double.tryParse(et.text) ?? 0;
-        final total = reaction + elapsed;
-        final preview = isSpecial ? specialStatus! :
-            (total < event.bracketSeconds ? RaceResultStatus.breakout : RaceResultStatus.valid);
-        return AlertDialog(
-          title: Text(isSpecial ? 'Konfirmasi ${specialStatus!.value}' : 'Konfirmasi Hasil Balap',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
-          content: Form(key: formKey, child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text(rider.riderName, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            ValueListenableBuilder<int>(valueListenable: lane, builder: (_, value, __) => DropdownButtonFormField<int>(
-              value: value, decoration: const InputDecoration(labelText: 'Lane', border: OutlineInputBorder()),
-              items: const [DropdownMenuItem(value: 1, child: Text('Lane 01')), DropdownMenuItem(value: 2, child: Text('Lane 02'))],
-              onChanged: (v) { if (v != null) lane.value = v; },
-            )),
-            if (!isSpecial) ...[
-              const SizedBox(height: 10),
-              _numberField(rt, 'Reaction Time (detik)', () => setDialogState(() {})),
-              const SizedBox(height: 10),
-              _numberField(et, 'Elapsed Time (detik)', () => setDialogState(() {})),
-            ],
-            const SizedBox(height: 12),
-            _previewRow('Total Time', isSpecial ? '-' : '${total.toStringAsFixed(3)} detik'),
-            _previewRow('Status', preview.value, color: _statusColor(preview)),
-          ])),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: AppColors.primaryMaroon),
-              onPressed: () async {
-                if (!isSpecial && !formKey.currentState!.validate()) return;
-                await _save(event, rider, lane.value, rt, et, specialStatus);
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                }
-              },
-              child: const Text('Simpan'),
-            ),
-          ],
-        );
-      });
-    });
-    rt.dispose();
-    et.dispose();
+  void _editResult(
+    EventModel event,
+    RaceResultModel result,
+    EventRegistrationModel rider,
+  ) {
+    _openInput(event, existing: result, rider: rider);
   }
 
-  Future<void> _save(EventModel event, EventRegistrationModel rider, int lane,
-      TextEditingController rt, TextEditingController et, RaceResultStatus? special) async {
+  Future<void> _save(
+    EventModel event,
+    EventRegistrationModel rider,
+    _TimingInput input,
+    RaceResultStatus? special,
+  ) async {
     setState(() => _processing = true);
     try {
       if (special == RaceResultStatus.jumpStart) {
-        await _telemetryService.saveJumpStart(eventId: event.eventId, registrationId: rider.registrationId, lane: lane);
+        await _telemetryService.saveJumpStart(
+          eventId: event.eventId,
+          registrationId: rider.registrationId,
+          lane: input.lane,
+        );
       } else if (special == RaceResultStatus.dnf) {
-        await _telemetryService.saveDnf(eventId: event.eventId, registrationId: rider.registrationId, lane: lane);
+        await _telemetryService.saveDnf(
+          eventId: event.eventId,
+          registrationId: rider.registrationId,
+          lane: input.lane,
+        );
       } else {
         await _telemetryService.saveRaceResult(
-          eventId: event.eventId, registrationId: rider.registrationId, lane: lane,
-          reactionTime: double.parse(rt.text), elapsedTime: double.parse(et.text),
+          eventId: event.eventId,
+          registrationId: rider.registrationId,
+          lane: input.lane,
+          reactionTime: input.reactionTime,
+          elapsedTime: input.elapsedTime,
           bracketSeconds: event.bracketSeconds,
         );
       }
       _message('Hasil balap berhasil disimpan.');
     } catch (e) {
       _message(e.toString().replaceFirst('Exception: ', ''), error: true);
-    } finally { if (mounted) setState(() => _processing = false); }
+    } finally {
+      if (mounted) setState(() => _processing = false);
+    }
   }
-
-  Widget _numberField(TextEditingController controller, String label, VoidCallback changed) => TextFormField(
-    controller: controller, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-    decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
-    validator: (value) => double.tryParse(value ?? '') == null || double.parse(value!) < 0 ? 'Masukkan angka valid' : null,
-    onChanged: (_) => changed(),
-  );
 
   Widget _sectionCard({required String title, required IconData icon, required Widget child}) => Container(
     padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white,
@@ -350,32 +344,26 @@ class _TabTelemetriViewState extends State<TabTelemetriView> {
       if (title == 'PESERTA SIAP BALAP') ...[
         const Divider(height: 20),
         Row(children: [
-          Expanded(child: OutlinedButton.icon(onPressed: _processing || _selectedEventId == null ? null : () {
-            final eventId = _selectedEventId!;
-            _eventService.getEventsStream().first.then((events) {
-              final event = events.firstWhere((e) => e.eventId == eventId);
-              _openInput(event);
-            });
-          }, icon: const Icon(Icons.timer_outlined, size: 16), label: const Text('Input Waktu'))),
+          Expanded(child: OutlinedButton.icon(
+            onPressed: _processing || _selectedEventId == null
+                ? null
+                : () => _openInputForSelectedEvent(),
+            icon: const Icon(Icons.timer_outlined, size: 16),
+            label: const Text('Input Waktu'),
+          )),
           const SizedBox(width: 8),
-          PopupMenuButton<RaceResultStatus>(onSelected: (status) {
-            _eventService.getEventsStream().first.then((events) {
-              final event = events.firstWhere((e) => e.eventId == _selectedEventId);
-              _openInput(event, specialStatus: status);
-            });
-          }, itemBuilder: (_) => const [
-            PopupMenuItem(value: RaceResultStatus.jumpStart, child: Text('JUMP_START')),
-            PopupMenuItem(value: RaceResultStatus.dnf, child: Text('DNF')),
-          ], child: const Icon(Icons.more_vert)),
+          PopupMenuButton<RaceResultStatus>(
+            onSelected: (status) =>
+                _openInputForSelectedEvent(specialStatus: status),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: RaceResultStatus.jumpStart, child: Text('JUMP_START')),
+              PopupMenuItem(value: RaceResultStatus.dnf, child: Text('DNF')),
+            ],
+            child: const Icon(Icons.more_vert),
+          ),
         ]),
       ],
     ]),
-  );
-
-  Widget _previewRow(String label, String value, {Color? color}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-        Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: color ?? AppColors.textDark))]),
   );
 
   Widget _emptyCard(String text) => Container(margin: const EdgeInsets.only(top: 16), padding: const EdgeInsets.all(18),
@@ -385,13 +373,220 @@ class _TabTelemetriViewState extends State<TabTelemetriView> {
   Widget _emptyInside(String text) => Padding(padding: const EdgeInsets.symmetric(vertical: 8),
     child: Text(text, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)));
 
-  Color _statusColor(RaceResultStatus status) => switch (status) {
-    RaceResultStatus.valid => Colors.green.shade700,
-    RaceResultStatus.breakout => Colors.orange.shade800,
-    RaceResultStatus.jumpStart => Colors.red.shade700,
-    RaceResultStatus.dnf => Colors.red.shade900,
-  };
-
   IconData _statusIcon(RaceResultStatus status) => status == RaceResultStatus.valid
       ? Icons.check_circle : Icons.warning_rounded;
 }
+
+/// Hasil input dari dialog waktu balap.
+class _TimingInput {
+  const _TimingInput({
+    required this.lane,
+    required this.reactionTime,
+    required this.elapsedTime,
+  });
+
+  final int lane;
+  final double reactionTime;
+  final double elapsedTime;
+}
+
+/// Dialog input waktu memiliki controller-nya sendiri dan men-dispose-nya
+/// lewat [State.dispose], yaitu setelah route benar-benar dilepas. Dialog
+/// hanya mengembalikan hasil; penyimpanan dilakukan pemanggil setelah dialog
+/// tertutup supaya tidak ada widget yang memakai controller yang sudah mati.
+class _TimingInputDialog extends StatefulWidget {
+  const _TimingInputDialog({
+    required this.event,
+    required this.rider,
+    this.existing,
+    this.specialStatus,
+  });
+
+  final EventModel event;
+  final EventRegistrationModel rider;
+  final RaceResultModel? existing;
+  final RaceResultStatus? specialStatus;
+
+  @override
+  State<_TimingInputDialog> createState() => _TimingInputDialogState();
+}
+
+class _TimingInputDialogState extends State<_TimingInputDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _reactionController;
+  late final TextEditingController _elapsedController;
+  late int _lane;
+  bool _closing = false;
+
+  bool get _isSpecial => widget.specialStatus != null;
+  double get _reactionTime => double.tryParse(_reactionController.text) ?? 0;
+  double get _elapsedTime => double.tryParse(_elapsedController.text) ?? 0;
+  double get _totalTime => _reactionTime + _elapsedTime;
+
+  RaceResultStatus get _previewStatus {
+    final special = widget.specialStatus;
+    if (special != null) return special;
+    return _totalTime < widget.event.bracketSeconds
+        ? RaceResultStatus.breakout
+        : RaceResultStatus.valid;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    _reactionController = TextEditingController(
+      text: existing == null ? '' : existing.reactionTime.toString(),
+    );
+    _elapsedController = TextEditingController(
+      text: existing == null ? '' : existing.elapsedTime.toString(),
+    );
+    _lane = existing?.lane ?? 1;
+  }
+
+  @override
+  void dispose() {
+    _reactionController.dispose();
+    _elapsedController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_closing) return;
+    if (!_isSpecial && !(_formKey.currentState?.validate() ?? false)) return;
+
+    _closing = true;
+    FocusManager.instance.primaryFocus?.unfocus();
+    Navigator.of(context).pop(
+      _TimingInput(
+        lane: _lane,
+        reactionTime: _reactionTime,
+        elapsedTime: _elapsedTime,
+      ),
+    );
+  }
+
+  void _cancel() {
+    if (_closing) return;
+    _closing = true;
+    FocusManager.instance.primaryFocus?.unfocus();
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isSpecial = _isSpecial;
+    final previewStatus = _previewStatus;
+
+    return AlertDialog(
+      title: Text(
+        isSpecial
+            ? 'Konfirmasi ${widget.specialStatus!.value}'
+            : 'Konfirmasi Hasil Balap',
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+      ),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.rider.riderName,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                initialValue: _lane,
+                decoration: const InputDecoration(
+                  labelText: 'Lane',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 1, child: Text('Lane 01')),
+                  DropdownMenuItem(value: 2, child: Text('Lane 02')),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _lane = value);
+                },
+              ),
+              if (!isSpecial) ...[
+                const SizedBox(height: 10),
+                _numberField(_reactionController, 'Reaction Time (detik)'),
+                const SizedBox(height: 10),
+                _numberField(_elapsedController, 'Elapsed Time (detik)'),
+              ],
+              const SizedBox(height: 12),
+              _previewRow(
+                'Total Time',
+                isSpecial ? '-' : '${_totalTime.toStringAsFixed(3)} detik',
+              ),
+              _previewRow(
+                'Status',
+                previewStatus.value,
+                color: _statusColor(previewStatus),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: _cancel, child: const Text('Batal')),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primaryMaroon,
+          ),
+          onPressed: _submit,
+          child: const Text('Simpan'),
+        ),
+      ],
+    );
+  }
+
+  Widget _numberField(TextEditingController controller, String label) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+      ),
+      validator: (value) {
+        final parsed = double.tryParse(value ?? '');
+        if (parsed == null || parsed < 0) return 'Masukkan angka valid';
+        return null;
+      },
+      onChanged: (_) => setState(() {}),
+    );
+  }
+
+  Widget _previewRow(String label, String value, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: color ?? AppColors.textDark,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Color _statusColor(RaceResultStatus status) => switch (status) {
+  RaceResultStatus.valid => Colors.green.shade700,
+  RaceResultStatus.breakout => Colors.orange.shade800,
+  RaceResultStatus.jumpStart => Colors.red.shade700,
+  RaceResultStatus.dnf => Colors.red.shade900,
+};
