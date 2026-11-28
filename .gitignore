@@ -52,3 +52,10 @@ google-services.json
 GoogleService-Info.plist
 firebase_options.dart
 firebase.json
+
+# Backend Midtrans (jangan commit key rahasia)
+midtrans-backend/.env
+midtrans-backend/.env.local
+midtrans-backend/node_modules/
+midtrans-backend/.vercel/
+

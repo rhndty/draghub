@@ -60,6 +60,11 @@ class AuthService {
       return UserModel.fromMap(data);
     });
   }
+
+  /// Keluar dari akun Firebase yang sedang aktif.
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
 }
 
 class RegistrationProfileCleanupException implements Exception {

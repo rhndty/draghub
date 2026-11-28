@@ -9,6 +9,7 @@ import '../../services/cloudinary_service.dart';
 import '../../services/motorcycle_service.dart';
 import '../../services/registration_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/midtrans_payment_sheet.dart';
 import '../add_bike_screen.dart';
 
 /// Modal Pendaftaran Event Balap Resmi (Milik Raihan / Pembalap)
@@ -36,6 +37,9 @@ class _RegisterEventModalState extends State<RegisterEventModal> {
 
   bool _isUploading = false;
   bool _isSubmitting = false;
+
+  /// true = bayar online lewat Midtrans, false = transfer manual + upload bukti
+  bool _useMidtrans = true;
 
   @override
   void initState() {
@@ -172,9 +176,10 @@ class _RegisterEventModalState extends State<RegisterEventModal> {
       return;
     }
 
-    if (_proofUrlCtrl.text.trim().isEmpty) {
+    if (!_useMidtrans && _proofUrlCtrl.text.trim().isEmpty) {
       _showMessage(
-        'Bukti pembayaran struk transfer wajib disertakan.',
+        'Bukti transfer wajib untuk metode Transfer Manual. '
+        'Kalau belum punya bukti, pilih "Midtrans (Online)".',
         isError: true,
       );
       return;
@@ -183,23 +188,56 @@ class _RegisterEventModalState extends State<RegisterEventModal> {
     setState(() => _isSubmitting = true);
 
     try {
-      await _registrationService.registerForEvent(
+      final registrationId = await _registrationService.registerForEvent(
         event: widget.event,
         bike: _selectedBike!,
-        paymentProofUrl: _proofUrlCtrl.text.trim(),
+        paymentProofUrl: _useMidtrans
+            ? 'MIDTRANS_PENDING'
+            : _proofUrlCtrl.text.trim(),
         riderName: _riderNameCtrl.text.trim(),
       );
 
-      if (mounted) {
+      if (!mounted) return;
+
+      // Transfer manual: selesai, tunggu verifikasi Bendahara.
+      if (!_useMidtrans) {
         Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Pendaftaran berhasil diajukan! Menunggu verifikasi Bendahara.',
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
+        _showMessage(
+          'Pendaftaran berhasil diajukan! Menunggu verifikasi Bendahara.',
+        );
+        return;
+      }
+
+      // Pembayaran online: buka Midtrans Snap.
+      int? assignedStartNumber;
+      await showModalBottomSheet<int>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => MidtransPaymentSheet(
+          registrationId: registrationId,
+          eventId: widget.event.eventId,
+          eventTitle: widget.event.title,
+          riderName: _riderNameCtrl.text.trim(),
+          amount: widget.event.registrationFee,
+          onPaymentSuccess: (startNumber) {
+            assignedStartNumber = startNumber;
+          },
+        ),
+      );
+
+      if (!mounted) return;
+      Navigator.pop(context, true);
+
+      if (assignedStartNumber != null) {
+        _showMessage(
+          'Pembayaran Midtrans berhasil! Nomor balap: '
+          '#${assignedStartNumber!.toString().padLeft(3, '0')}',
+        );
+      } else {
+        _showMessage(
+          'Pendaftaran tersimpan. Selesaikan pembayaran Midtrans di tab '
+          'ONGOING agar nomor balap terbit.',
         );
       }
     } catch (e) {
@@ -441,113 +479,153 @@ class _RegisterEventModalState extends State<RegisterEventModal> {
             ),
             const SizedBox(height: 14),
 
-            // 3. UPLOAD BUKTI TRANSFER KE CLOUDINARY (PRD 4.3)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'BUKTI TRANSFER BIAYA PENDAFTARAN',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textDark,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    Text(
-                      'Biaya: Rp ${widget.event.registrationFee}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.primaryMaroon,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.segmentBackground,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.borderLight),
-                  ),
-                  child: Column(
+            // 3. METODE PEMBAYARAN
+            const Text(
+              'METODE PEMBAYARAN',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 6),
+            _buildPaymentMethodOption(
+              value: true,
+              title: 'Midtrans (Online)',
+              subtitle:
+                  'QRIS, GoPay, Virtual Account, kartu. Otomatis terverifikasi '
+                  'dan nomor balap langsung terbit.',
+              icon: Icons.bolt,
+            ),
+            const SizedBox(height: 8),
+            _buildPaymentMethodOption(
+              value: false,
+              title: 'Transfer Manual',
+              subtitle: 'Upload bukti transfer, lalu diverifikasi Bendahara.',
+              icon: Icons.account_balance,
+            ),
+            const SizedBox(height: 14),
+
+            // 4. MIDTRANS ATAU BUKTI TRANSFER MANUAL
+            if (_useMidtrans)
+              _buildMidtransPaymentInfo()
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _proofUrlCtrl,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              decoration: const InputDecoration(
-                                hintText: 'URL Bukti Struk Cloudinary',
-                                border: InputBorder.none,
-                                isDense: true,
+                      const Text(
+                        'BUKTI TRANSFER BIAYA PENDAFTARAN',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      Text(
+                        'Biaya: Rp ${widget.event.registrationFee}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.primaryMaroon,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.segmentBackground,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.borderLight),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _proofUrlCtrl,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                decoration: const InputDecoration(
+                                  hintText: 'URL Bukti Struk Cloudinary',
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
                               ),
                             ),
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: _isUploading
-                                ? null
-                                : _uploadProofToCloudinary,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryMaroon,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 8,
+                            ElevatedButton.icon(
+                              onPressed: _isUploading
+                                  ? null
+                                  : _uploadProofToCloudinary,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primaryMaroon,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 8,
+                                ),
                               ),
-                            ),
-                            icon: _isUploading
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
+                              icon: _isUploading
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.cloud_upload_outlined,
+                                      size: 16,
                                       color: Colors.white,
-                                      strokeWidth: 2,
                                     ),
-                                  )
-                                : const Icon(
-                                    Icons.cloud_upload_outlined,
-                                    size: 16,
-                                    color: Colors.white,
-                                  ),
-                            label: const Text(
-                              'UPLOAD',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                              label: const Text(
+                                'UPLOAD',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
+                            ),
+                          ],
+                        ),
+                        if (_proofUrlCtrl.text.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Image.network(
+                              _proofUrlCtrl.text,
+                              height: 80,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (ctx, err, stack) =>
+                                  const SizedBox.shrink(),
                             ),
                           ),
                         ],
-                      ),
-                      if (_proofUrlCtrl.text.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            _proofUrlCtrl.text,
-                            height: 80,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (ctx, err, stack) =>
-                                const SizedBox.shrink(),
-                          ),
-                        ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Belum punya bukti transfer? Pilih "Midtrans (Online)" di atas — tidak perlu screenshot.',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.blue.shade800,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
 
             const SizedBox(height: 24),
 
@@ -578,6 +656,8 @@ class _RegisterEventModalState extends State<RegisterEventModal> {
                     : Text(
                         event.remainingQuota <= 0
                             ? 'KUOTA BALAPAN PENUH'
+                            : _useMidtrans
+                            ? 'BAYAR & DAFTAR (MIDTRANS)'
                             : 'KIRIM PENDAFTARAN',
                         style: const TextStyle(
                           fontSize: 12,
@@ -590,6 +670,147 @@ class _RegisterEventModalState extends State<RegisterEventModal> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodOption({
+    required bool value,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    final selected = _useMidtrans == value;
+    return GestureDetector(
+      onTap: () => setState(() => _useMidtrans = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primaryMaroon.withValues(alpha: 0.06)
+              : AppColors.segmentBackground,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? AppColors.primaryMaroon : AppColors.borderLight,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: selected ? AppColors.primaryMaroon : AppColors.textMuted,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: selected
+                                ? AppColors.primaryMaroon
+                                : AppColors.textDark,
+                          ),
+                        ),
+                      ),
+                      if (value)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryMaroon,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'REKOMENDASI',
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textMuted,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMidtransPaymentInfo() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 16, color: Colors.blue.shade800),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Pembayaran online via Midtrans',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade900,
+                  ),
+                ),
+              ),
+              Text(
+                'Rp ${widget.event.registrationFee}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.primaryMaroon,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Setelah menekan tombol di bawah, kamu akan diarahkan ke halaman '
+            'pembayaran Midtrans. Nomor balap (#001 dst) dan catatan buku kas '
+            'terbit otomatis setelah pembayaran berstatus lunas (settlement).',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.blue.shade900,
+              height: 1.4,
+            ),
+          ),
+        ],
       ),
     );
   }
