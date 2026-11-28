@@ -1,0 +1,14 @@
+{
+  "name": "draghub-midtrans-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend kecil untuk membuat Snap token & mengecek status transaksi Midtrans DragHub",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "start": "node --env-file=.env server.js",
+    "dev": "node --env-file=.env --watch server.js"
+  }
+}

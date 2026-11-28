@@ -16,7 +16,6 @@ class AdminTelementryScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: _buildAppBar(context),
       body: const TabTelemetriView(),
-      bottomNavigationBar: _buildBottomNavigation(context),
     );
   }
 
@@ -37,7 +36,7 @@ class AdminTelementryScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ADMIN',
+            'Timing Admin',
             style: TextStyle(
               color: AppColors.textDark,
               fontSize: 14,
@@ -94,49 +93,6 @@ class AdminTelementryScreen extends StatelessWidget {
             backgroundColor: AppColors.primaryMaroon,
             child: Icon(Icons.person, color: Colors.white, size: 18),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomNavigation(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: 2,
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: AppColors.primaryMaroon,
-      unselectedItemColor: AppColors.textMuted,
-      selectedLabelStyle: const TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: 10,
-      ),
-      unselectedLabelStyle: const TextStyle(fontSize: 10),
-      onTap: (index) {
-        if (index == 2) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Menu admin lainnya dapat dihubungkan di sini.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      },
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.event_note),
-          label: 'EVENT',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.account_balance_wallet_outlined),
-          label: 'FINANCIAL',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.timer_outlined),
-          activeIcon: Icon(
-            Icons.timer,
-            color: AppColors.primaryMaroon,
-          ),
-          label: 'TIMING',
         ),
       ],
     );

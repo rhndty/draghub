@@ -342,7 +342,7 @@ class _TabPembayaranViewState extends State<TabPembayaranView> {
         ),
       );
     } catch (e) {
-      _showMessage('Gagal membuka simulasi Midtrans: $e', isError: true);
+      _showMessage('Gagal membuka pembayaran Midtrans: $e', isError: true);
     } finally {
       if (mounted) setState(() => _isLoadingAction = false);
     }
@@ -619,6 +619,7 @@ class _TabPembayaranViewState extends State<TabPembayaranView> {
     final rejectionReason = reg['paymentRejectionReason'];
     final verifiedBy = reg['verifiedBy'];
     final isMidtrans = proofUrl.toString().contains('MIDTRANS');
+    final isMidtransPending = isMidtrans && paymentStatus == 'PENDING';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -721,7 +722,11 @@ class _TabPembayaranViewState extends State<TabPembayaranView> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      isMidtrans ? 'Metode: Midtrans Sandbox' : 'Bukti Transfer Bank',
+                      isMidtransPending
+                          ? 'Metode: Midtrans (menunggu pembayaran)'
+                          : isMidtrans
+                              ? 'Metode: Midtrans (terverifikasi)'
+                              : 'Bukti Transfer Bank',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -745,6 +750,33 @@ class _TabPembayaranViewState extends State<TabPembayaranView> {
                   ),
               ],
             ),
+
+            // Info khusus pembayaran online Midtrans yang belum lunas
+            if (isMidtransPending) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Pembayaran online via Midtrans belum lunas. Status akan otomatis menjadi PAID setelah Midtrans settlement, jadi tidak perlu diverifikasi manual. Kalau rider sudah bayar tetapi status masih pending, minta rider menekan "Cek Status" di aplikasi.',
+                        style: TextStyle(fontSize: 11, color: Colors.blue.shade900, height: 1.35),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             // Info jika ditolak
             if (paymentStatus == 'REJECTED' && rejectionReason != null) ...[
@@ -800,16 +832,26 @@ class _TabPembayaranViewState extends State<TabPembayaranView> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade700,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        elevation: 0,
-                      ),
-                      onPressed: () => _showVerifyDialog(reg),
-                      child: const Text('Verifikasi Lunas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    ),
+                    child: isMidtransPending
+                        ? OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.amber.shade900,
+                              side: BorderSide(color: Colors.amber.shade400),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () => _showVerifyDialog(reg),
+                            child: const Text('Verifikasi Manual', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          )
+                        : ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green.shade700,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              elevation: 0,
+                            ),
+                            onPressed: () => _showVerifyDialog(reg),
+                            child: const Text('Verifikasi Lunas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
                   ),
                 ],
               ),
@@ -826,7 +868,7 @@ class _TabPembayaranViewState extends State<TabPembayaranView> {
                   ),
                   onPressed: () => _openMidtransSimulator(reg),
                   icon: const Icon(Icons.flash_on, size: 16),
-                  label: const Text('Simulasi Bayar via Midtrans Sandbox', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  label: const Text('Bayar via Midtrans (Sandbox)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

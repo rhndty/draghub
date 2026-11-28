@@ -6,6 +6,7 @@ import '../../models/event_registration_model.dart';
 import '../../services/event_service.dart';
 import '../../services/registration_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/midtrans_payment_sheet.dart';
 import '../../widgets/qr_kehadiran_card.dart';
 
 /// Tab ONGOING / AKTIF (Milik Raihan / Pembalap)
@@ -28,6 +29,7 @@ class _RiderOngoingViewState extends State<RiderOngoingView> {
   final EventService _eventService = EventService();
   final RegistrationService _registrationService = RegistrationService();
   final String? _uid = FirebaseAuth.instance.currentUser?.uid;
+  bool _isOpeningPayment = false;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +159,72 @@ class _RiderOngoingViewState extends State<RiderOngoingView> {
     }
   }
 
+  Future<void> _openMidtransPayment(EventRegistrationModel reg) async {
+    if (_isOpeningPayment) return;
+    setState(() => _isOpeningPayment = true);
+
+    try {
+      final event = await _eventService.getEventById(reg.eventId);
+      if (!mounted) return;
+
+      if (event == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data event tidak ditemukan. Hubungi panitia.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      int? assignedStartNumber;
+      await showModalBottomSheet<int>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => MidtransPaymentSheet(
+          registrationId: reg.registrationId,
+          eventId: reg.eventId,
+          eventTitle: event.title,
+          riderName: reg.riderName,
+          amount: event.registrationFee,
+          onPaymentSuccess: (startNumber) {
+            assignedStartNumber = startNumber;
+          },
+        ),
+      );
+
+      if (!mounted) return;
+      if (assignedStartNumber != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Pembayaran berhasil! Nomor balap: '
+              '#${assignedStartNumber!.toString().padLeft(3, '0')}',
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal membuka pembayaran: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isOpeningPayment = false);
+    }
+  }
+
   Widget _buildPendingPaymentCard(EventRegistrationModel reg) {
+    final isMidtrans = reg.paymentProofUrl.startsWith('MIDTRANS');
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -197,7 +264,9 @@ class _RiderOngoingViewState extends State<RiderOngoingView> {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'MENUNGGU VERIFIKASI BENDAHARA',
+                      isMidtrans
+                          ? 'MENUNGGU PEMBAYARAN MIDTRANS'
+                          : 'MENUNGGU VERIFIKASI BENDAHARA',
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
@@ -235,14 +304,61 @@ class _RiderOngoingViewState extends State<RiderOngoingView> {
           const SizedBox(height: 12),
           const Divider(height: 1, color: AppColors.borderLight),
           const SizedBox(height: 12),
-          const Text(
-            'Bukti transfer pendaftaran Anda sedang ditinjau oleh Bendahara (Dika). Nomor balap resmi (#001 dst) dan QR Kehadiran akan terbit secara otomatis setelah pembayaran disahkan.',
-            style: TextStyle(
+          Text(
+            isMidtrans
+                ? 'Pendaftaran sudah tersimpan, tetapi pembayaran Midtrans '
+                      'belum selesai. Tekan tombol di bawah untuk membayar. '
+                      'Nomor balap resmi dan QR kehadiran akan terbit otomatis '
+                      'setelah pembayaran lunas (settlement).'
+                : 'Bukti transfer pendaftaran Anda sedang ditinjau oleh '
+                      'Bendahara (Dika). Nomor balap resmi (#001 dst) dan QR '
+                      'Kehadiran akan terbit secara otomatis setelah pembayaran '
+                      'disahkan.',
+            style: const TextStyle(
               fontSize: 11,
               color: AppColors.textMuted,
               height: 1.4,
             ),
           ),
+          if (isMidtrans) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: _isOpeningPayment
+                    ? null
+                    : () => _openMidtransPayment(reg),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryMaroon,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                icon: _isOpeningPayment
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.payment, size: 16, color: Colors.white),
+                label: Text(
+                  _isOpeningPayment
+                      ? 'MENYIAPKAN PEMBAYARAN...'
+                      : 'BAYAR VIA MIDTRANS',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.8,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

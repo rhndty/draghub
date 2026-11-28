@@ -106,9 +106,14 @@ service cloud.firestore {
     // 6. KOLEKSI KAS_TRANSACTIONS
     match /kas_transactions/{transactionId} {
       allow read: if isPanitia();
-      // Bendahara manual atau sistem otomatis saat rider melunasi pendaftaran
+      // Bendahara manual atau sistem otomatis saat rider melunasi pendaftaran.
+      // CATATAN: aplikasi menulis type 'MASUK' (bukan 'IN'), jadi aturan harus
+      // memakai 'MASUK' agar pencatatan kas Midtrans tidak kena permission-denied.
       allow create: if hasRole(['bendahara'])
-                    || (isSignedIn() && request.resource.data.type == 'IN');
+                    || (isSignedIn()
+                        && request.resource.data.type == 'MASUK'
+                        && request.resource.data.category == 'PENDAFTARAN_EVENT'
+                        && request.resource.data.recordedBy == 'MIDTRANS_SANDBOX');
       allow update: if hasRole(['bendahara']);
       allow delete: if hasRole(['bendahara', 'ketua', 'wakil']);
     }

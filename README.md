@@ -2,6 +2,29 @@
 
 A new Flutter project.
 
+## Pembayaran Midtrans
+
+Pendaftaran lomba drag mendukung pembayaran online sungguhan lewat Midtrans Snap
+(mode Sandbox). Karena Snap membutuhkan Server Key, ada backend kecil di folder
+[`midtrans-backend`](midtrans-backend).
+
+Panduan lengkap (ambil key, jalankan backend, deploy Vercel, deploy Firestore
+rules, dan cara mengetes pembayaran) ada di
+[docs/MIDTRANS_SETUP.md](docs/MIDTRANS_SETUP.md).
+
+Quick start:
+
+```powershell
+cd midtrans-backend
+Copy-Item .env.example .env   # lalu isi MIDTRANS_SERVER_KEY
+npm start
+```
+
+```powershell
+flutter run                   # Android emulator -> http://10.0.2.2:3000
+flutter run -d chrome         # Web -> http://localhost:3000
+```
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
